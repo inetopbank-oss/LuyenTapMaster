@@ -113,11 +113,11 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex justify-center items-center p-3 font-sans animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row overflow-hidden max-h-[85vh] md:h-[520px] border border-slate-200">
+    <div className="min-h-screen bg-slate-100 flex justify-center items-start md:items-center p-3 md:p-0 font-sans animate-fade-in overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row md:overflow-hidden h-auto md:h-[520px] border border-slate-200 my-8 md:my-0">
 
         {/* LEFT SIDEBAR: Context & Mode & Stats */}
-        <div className="w-full md:w-64 bg-slate-50 p-4 md:p-5 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto">
+        <div className="w-full md:w-64 bg-slate-50 p-4 md:p-5 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shrink-0 md:overflow-y-auto">
             {/* Header */}
             <div className="mb-5">
                 <button onClick={onBack} className="flex items-center gap-1 text-slate-400 hover:text-slate-700 text-xs font-bold mb-3 transition-colors">
@@ -185,9 +185,9 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
         </div>
 
         {/* RIGHT MAIN: Configuration Form */}
-        <div className="flex-1 flex flex-col bg-white overflow-hidden relative">
+        <div className="flex-1 flex flex-col bg-white md:overflow-hidden relative">
              <form onSubmit={handleSubmit} className="flex-1 flex flex-col h-full">
-                 <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-5">
+                 <div className="flex-1 md:overflow-y-auto p-5 md:p-6 space-y-5">
                     {mode === 'STANDARD' ? (
                         <div className="space-y-5 animate-fade-in">
                             <div>
