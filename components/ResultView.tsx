@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle, XCircle, RotateCcw, Home, Clock, Award, HelpCircle, ChevronDown, Target, Filter, AlertCircle, BookOpen, FileText, PieChart } from 'lucide-react';
-import { Question } from '../types';
+import { CheckCircle, XCircle, RotateCcw, Home, Clock, Award, HelpCircle, ChevronDown, Target, Filter, AlertCircle, BookOpen, FileText, PieChart, User, School, History, Calendar } from 'lucide-react';
+import { Question, UserInfo, ExamResultLog } from '../types';
 import { formatTime } from '../utils';
 import MathText from './MathText';
 
@@ -8,6 +8,8 @@ interface ResultViewProps {
   questions: Question[];
   userAnswers: Record<string, string>;
   timeSpent: number;
+  userInfo: UserInfo | null;
+  history: ExamResultLog[];
   onRetry: () => void;
   onHome: () => void;
 }
@@ -59,8 +61,8 @@ const ScoreCircle = ({ score, max, size = 120 }: { score: number; max: number; s
     )
 }
 
-const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpent, onRetry, onHome }) => {
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'REVIEW'>('OVERVIEW');
+const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpent, userInfo, history, onRetry, onHome }) => {
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'REVIEW' | 'HISTORY'>('OVERVIEW');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<'ALL' | 'INCORRECT'>('ALL');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -118,28 +120,50 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
       return true;
   });
 
+  const formatDate = (ts: number) => {
+      return new Date(ts).toLocaleString('vi-VN', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+      });
+  }
+
   return (
     <div ref={containerRef} className="h-screen overflow-y-auto bg-slate-50 pb-32 animate-fade-in font-sans relative">
       
       {/* Sticky Header with Tabs */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 pt-4">
-             <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
-                <h1 className="text-2xl font-black text-slate-800 tracking-tight">Kết quả bài làm</h1>
+             <div className="flex flex-col lg:flex-row items-center justify-between mb-4 gap-4">
+                <div className="flex flex-col text-center lg:text-left">
+                    <h1 className="text-2xl font-black text-slate-800 tracking-tight">Kết quả bài làm</h1>
+                    {userInfo && (
+                        <div className="flex items-center justify-center lg:justify-start gap-4 text-xs font-medium text-slate-500 mt-1">
+                            <span className="flex items-center gap-1"><User size={12}/> {userInfo.name}</span>
+                            <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                            <span className="flex items-center gap-1"><School size={12}/> {userInfo.class}</span>
+                        </div>
+                    )}
+                </div>
                 
                 {/* Tab Switcher */}
-                <div className="bg-slate-100 p-1 rounded-xl flex items-center font-bold text-sm">
+                <div className="bg-slate-100 p-1 rounded-xl flex items-center font-bold text-sm shrink-0 overflow-x-auto max-w-full">
                     <button 
                         onClick={() => setActiveTab('OVERVIEW')}
-                        className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${activeTab === 'OVERVIEW' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`px-3 py-2 sm:px-4 rounded-lg flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'OVERVIEW' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        <PieChart size={16} /> Tổng quan
+                        <PieChart size={16} /> <span className="hidden sm:inline">Tổng quan</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('REVIEW')}
-                        className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${activeTab === 'REVIEW' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`px-3 py-2 sm:px-4 rounded-lg flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'REVIEW' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        <FileText size={16} /> Xem lại bài thi
+                        <FileText size={16} /> <span className="hidden sm:inline">Xem lại đề</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('HISTORY')}
+                        className={`px-3 py-2 sm:px-4 rounded-lg flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'HISTORY' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <History size={16} /> <span className="hidden sm:inline">Lịch sử</span>
                     </button>
                 </div>
              </div>
@@ -415,6 +439,81 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
                           </div>
                       )
                   })}
+              </div>
+          </div>
+      )}
+
+      {/* TAB 3: HISTORY */}
+      {activeTab === 'HISTORY' && (
+          <div className="max-w-5xl mx-auto px-4 py-8 animate-fade-in">
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 mb-8 flex items-start gap-4">
+                  <History className="text-emerald-600 shrink-0 mt-1" size={24} />
+                  <div>
+                      <h3 className="font-bold text-emerald-900 text-lg mb-1">Lịch sử ôn luyện</h3>
+                      <p className="text-emerald-700/80 text-sm">Theo dõi tiến độ và kết quả các bài thi bạn đã hoàn thành.</p>
+                  </div>
+              </div>
+
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-slate-600">
+                        <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-400">
+                            <tr>
+                                <th className="px-6 py-4">Thời gian</th>
+                                <th className="px-6 py-4">Điểm số</th>
+                                <th className="px-6 py-4">Kết quả</th>
+                                <th className="px-6 py-4">Thời lượng</th>
+                                <th className="px-6 py-4">Chế độ</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {history.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">
+                                        Chưa có lịch sử làm bài. Hãy hoàn thành bài thi đầu tiên!
+                                    </td>
+                                </tr>
+                            ) : (
+                                history.map((log) => {
+                                    const percent = Math.round((log.score / log.totalQuestions) * 100);
+                                    let gradeColor = "text-rose-600 bg-rose-50 border-rose-100";
+                                    let gradeLabel = "Cần cố gắng";
+                                    if (percent >= 80) { gradeColor = "text-emerald-600 bg-emerald-50 border-emerald-100"; gradeLabel = "Xuất sắc"; }
+                                    else if (percent >= 50) { gradeColor = "text-amber-600 bg-amber-50 border-amber-100"; gradeLabel = "Đạt"; }
+
+                                    return (
+                                        <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-6 py-4 font-medium text-slate-900 flex items-center gap-2 whitespace-nowrap">
+                                                <Calendar size={16} className="text-slate-400" />
+                                                {formatDate(log.timestamp)}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-lg font-black text-slate-800">{Math.round((log.score / log.totalQuestions) * 10)}</span>
+                                                    <span className="text-xs text-slate-400">/ 10</span>
+                                                </div>
+                                                <div className="text-xs text-slate-400">{log.score}/{log.totalQuestions} câu</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2 py-1 rounded-md text-xs font-bold border ${gradeColor}`}>
+                                                    {gradeLabel}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 font-mono text-slate-500">
+                                                {formatTime(log.timeSpent)}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-xs font-bold ${log.mode === 'STANDARD' ? 'text-indigo-600' : 'text-slate-500'}`}>
+                                                    {log.mode === 'STANDARD' ? 'Thi thử' : 'Luyện tập'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                  </div>
               </div>
           </div>
       )}

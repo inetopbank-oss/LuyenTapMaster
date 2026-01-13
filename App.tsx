@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
-import { Question, ExamState, ExamConfig, QuestionType } from './types';
+import React, { useState, useEffect } from 'react';
+import { Question, ExamState, ExamConfig, QuestionType, UserInfo, ExamResultLog } from './types';
 import { shuffleArray } from './utils';
 import FileUpload from './components/FileUpload';
 import ExamConfigView from './components/ExamConfigView';
 import ExamRunner from './components/ExamRunner';
 import ResultView from './components/ResultView';
+import LoginView from './components/LoginView';
+
+const HISTORY_KEY = 'mathpro_exam_history';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<ExamState>({
-    status: 'UPLOAD',
+    status: 'LOGIN',
+    userInfo: null,
     originalQuestions: [],
     activeQuestions: [],
     userAnswers: {},
@@ -22,6 +26,28 @@ const App: React.FC = () => {
         durationMinutes: 30
     }
   });
+
+  const [history, setHistory] = useState<ExamResultLog[]>([]);
+
+  // Load history on mount
+  useEffect(() => {
+      try {
+          const saved = localStorage.getItem(HISTORY_KEY);
+          if (saved) {
+              setHistory(JSON.parse(saved));
+          }
+      } catch (e) {
+          console.error("Failed to load history", e);
+      }
+  }, []);
+
+  const handleLogin = (info: UserInfo) => {
+      setAppState(prev => ({
+          ...prev,
+          userInfo: info,
+          status: 'UPLOAD'
+      }));
+  };
 
   const handleDataLoaded = (questions: Question[]) => {
     setAppState(prev => ({
@@ -83,11 +109,41 @@ const App: React.FC = () => {
   };
 
   const handleCompleteExam = (answers: Record<string, string>) => {
+      const endTime = Date.now();
+      const startTime = appState.startTime || endTime;
+      const timeSpent = Math.floor((endTime - startTime) / 1000);
+      
+      // Calculate Score for History
+      let correctCount = 0;
+      appState.activeQuestions.forEach(q => {
+          if (q.type === 'MCQ' && q.correctAnswer) {
+             // Normalize answers
+             const userAns = String(answers[q.id] || '').trim().replace('.', '').toUpperCase();
+             const correctAns = String(q.correctAnswer).trim().replace('.', '').toUpperCase();
+             if (userAns === correctAns) correctCount++;
+          }
+      });
+
+      // Create Log
+      const newLog: ExamResultLog = {
+          id: Date.now().toString(),
+          timestamp: endTime,
+          score: correctCount,
+          totalQuestions: appState.activeQuestions.length,
+          timeSpent: timeSpent,
+          mode: appState.config.mode
+      };
+
+      // Update History State & LocalStorage
+      const updatedHistory = [newLog, ...history];
+      setHistory(updatedHistory);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+
       setAppState(prev => ({
           ...prev,
           status: 'RESULT',
           userAnswers: answers,
-          endTime: Date.now()
+          endTime: endTime
       }));
   };
 
@@ -99,8 +155,8 @@ const App: React.FC = () => {
   const handleHome = () => {
       setAppState(prev => ({
           ...prev,
-          status: 'UPLOAD', // Or CONFIG if we want to keep data
-          originalQuestions: [], // Clearing for upload new file, or keep if changing UX
+          status: 'UPLOAD', // Go back to upload but keep user info
+          originalQuestions: [], 
           activeQuestions: [],
           userAnswers: {}
       }));
@@ -117,6 +173,10 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen font-sans">
+      {appState.status === 'LOGIN' && (
+          <LoginView onLogin={handleLogin} />
+      )}
+
       {appState.status === 'UPLOAD' && (
         <FileUpload onDataLoaded={handleDataLoaded} />
       )}
@@ -142,6 +202,8 @@ const App: React.FC = () => {
             questions={appState.activeQuestions}
             userAnswers={appState.userAnswers}
             timeSpent={timeSpentSeconds}
+            userInfo={appState.userInfo}
+            history={history}
             onRetry={handleRetry}
             onHome={handleHome} 
         />

@@ -11,6 +11,20 @@ export interface Question {
   explanation?: string;
 }
 
+export interface UserInfo {
+  name: string;
+  class: string;
+}
+
+export interface ExamResultLog {
+  id: string;
+  timestamp: number;
+  score: number;
+  totalQuestions: number;
+  timeSpent: number;
+  mode: 'CUSTOM' | 'STANDARD';
+}
+
 export interface ExamConfig {
   mode: 'CUSTOM' | 'STANDARD'; // STANDARD = 50-30-20
   difficulty: Difficulty | 'ALL';
@@ -20,7 +34,8 @@ export interface ExamConfig {
 }
 
 export interface ExamState {
-  status: 'UPLOAD' | 'CONFIG' | 'RUNNING' | 'RESULT';
+  status: 'LOGIN' | 'UPLOAD' | 'CONFIG' | 'RUNNING' | 'RESULT';
+  userInfo: UserInfo | null;
   originalQuestions: Question[];
   activeQuestions: Question[];
   userAnswers: Record<string, string>; // questionId -> answer
