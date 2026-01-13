@@ -1,0 +1,5 @@
+{
+  "name": "MathPro Student Practice",
+  "description": "A modern, client-side web application for high school math practice and online testing featuring LaTeX math rendering, JSON question banks, and detailed analytics.",
+  "requestFramePermissions": []
+}
