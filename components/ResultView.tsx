@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, RotateCcw, Home, Clock, Award, HelpCircle, ChevronDown, ChevronUp, Target, BarChart2 } from 'lucide-react';
+import { CheckCircle, XCircle, RotateCcw, Home, Clock, Award, HelpCircle, ChevronDown, ChevronUp, Target, BarChart2, Filter } from 'lucide-react';
 import { Question } from '../types';
 import { formatTime } from '../utils';
 import MathText from './MathText';
@@ -14,15 +14,23 @@ interface ResultViewProps {
 
 const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpent, onRetry, onHome }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [filterMode, setFilterMode] = useState<'ALL' | 'INCORRECT'>('ALL');
 
-  // Simple scoring logic for MCQ
+  // Helper to check correctness
+  const checkIsCorrect = (q: Question) => {
+      if (q.type === 'MCQ' && q.correctAnswer) {
+          const user = (userAnswers[q.id] || '').trim().replace('.', '');
+          const correct = q.correctAnswer.trim().replace('.', '');
+          return user === correct;
+      }
+      return true; // Essay or others are treated as neutral/correct for scoring display purposes usually
+  };
+
+  // Calculate Score
   let correctCount = 0;
   questions.forEach(q => {
     if (q.type === 'MCQ' && q.correctAnswer) {
-        // Normalize answer comparison (remove dots, trim)
-        const user = (userAnswers[q.id] || '').trim().replace('.', '');
-        const correct = q.correctAnswer.trim().replace('.', '');
-        if (user === correct) correctCount++;
+        if (checkIsCorrect(q)) correctCount++;
     }
   });
 
@@ -38,6 +46,17 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
   const toggleExpand = (id: string) => {
       setExpandedId(expandedId === id ? null : id);
   }
+
+  // Filter questions based on mode
+  const displayedQuestions = questions.filter(q => {
+      if (filterMode === 'ALL') return true;
+      if (filterMode === 'INCORRECT') {
+          // Show if it is MCQ and Incorrect (or skipped)
+          if (q.type === 'MCQ') return !checkIsCorrect(q);
+          return false; // Hide essays in incorrect filter for now
+      }
+      return true;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-40 animate-fade-in font-sans">
@@ -89,111 +108,138 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
 
       {/* Detail List */}
       <div className="max-w-5xl mx-auto px-4 md:px-6 mt-8 md:mt-12 space-y-4 md:space-y-8">
-        <h2 className="text-xl md:text-3xl font-bold text-slate-700 flex items-center gap-2 md:gap-3 mb-4 md:mb-6 px-2">
-            <div className="bg-indigo-600 text-white p-1.5 md:p-2 rounded-lg"><BarChart2 className="w-5 h-5 md:w-6 md:h-6" /></div>
-            Chi tiết lời giải
-        </h2>
+        
+        {/* Controls Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
+            <h2 className="text-xl md:text-3xl font-bold text-slate-700 flex items-center gap-2 md:gap-3 px-2">
+                <div className="bg-indigo-600 text-white p-1.5 md:p-2 rounded-lg"><BarChart2 className="w-5 h-5 md:w-6 md:h-6" /></div>
+                Chi tiết lời giải
+            </h2>
 
-        {questions.map((q, idx) => {
-            const userAns = userAnswers[q.id];
-            const isCorrect = q.type === 'MCQ' 
-                ? (userAns === q.correctAnswer) 
-                : true; 
-            
-            const isSkipped = !userAns;
-            const isMCQ = q.type === 'MCQ';
+            <div className="flex p-1 bg-slate-200 rounded-xl self-start md:self-auto">
+                <button 
+                    onClick={() => setFilterMode('ALL')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterMode === 'ALL' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    Tất cả
+                </button>
+                <button 
+                    onClick={() => setFilterMode('INCORRECT')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${filterMode === 'INCORRECT' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    <Filter className="w-4 h-4" /> Chỉ câu sai
+                </button>
+            </div>
+        </div>
 
-            return (
-                <div key={q.id} className="bg-white border border-slate-200 rounded-xl md:rounded-[1.5rem] shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                    <div 
-                        onClick={() => toggleExpand(q.id)}
-                        className="flex items-start md:items-center p-4 md:p-8 cursor-pointer hover:bg-slate-50/80 transition-colors group"
-                    >
-                        <div className="mr-4 md:mr-8 shrink-0 mt-1 md:mt-0">
-                            {isSkipped ? (
-                                <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 border-2 border-slate-200 group-hover:scale-110 transition-transform">
-                                    <HelpCircle className="w-6 h-6 md:w-8 md:h-8" />
-                                </div>
-                            ) : isCorrect ? (
-                                <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 border-2 border-emerald-200 group-hover:scale-110 transition-transform">
-                                    <CheckCircle className="w-6 h-6 md:w-8 md:h-8" />
-                                </div>
-                            ) : (
-                                <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 border-2 border-rose-200 group-hover:scale-110 transition-transform">
-                                    <XCircle className="w-6 h-6 md:w-8 md:h-8" />
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-lg md:text-2xl text-slate-800 mb-1 md:mb-2 flex flex-wrap items-center gap-2 md:gap-3">
-                                Câu {idx + 1} 
-                                <span className={`text-xs md:text-sm font-bold px-2 py-0.5 md:px-3 md:py-1 rounded-full border 
-                                    ${q.difficulty === 'NB' ? 'bg-green-50 text-green-700 border-green-200' : 
-                                      q.difficulty === 'TH' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
-                                      q.difficulty === 'VD' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}
-                                `}>
-                                    {q.difficulty}
-                                </span>
-                            </h3>
-                            <div className="text-slate-500 text-sm md:text-xl truncate max-w-3xl font-medium">
-                                {q.content.substring(0, 60)}...
-                            </div>
-                        </div>
-                        <div className="text-slate-300 group-hover:text-indigo-500 transition-colors pl-2 md:pl-4 self-center">
-                            {expandedId === q.id ? <ChevronUp className="w-6 h-6 md:w-9 md:h-9" /> : <ChevronDown className="w-6 h-6 md:w-9 md:h-9" />}
-                        </div>
-                    </div>
+        {displayedQuestions.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                <CheckCircle className="w-16 h-16 text-emerald-200 mx-auto mb-4" />
+                <p className="text-xl text-slate-400 font-medium">Bạn không có câu trả lời sai nào!</p>
+            </div>
+        ) : (
+            displayedQuestions.map((q, idx) => {
+                const userAns = userAnswers[q.id];
+                const isCorrect = q.type === 'MCQ' ? checkIsCorrect(q) : true;
+                const isSkipped = !userAns;
+                const isMCQ = q.type === 'MCQ';
 
-                    {expandedId === q.id && (
-                        <div className="p-4 md:p-10 border-t-2 border-slate-100 bg-slate-50/50 animate-slide-up">
-                            <div className="mb-6 md:mb-10 text-xl md:text-3xl text-slate-900 leading-relaxed font-medium">
-                                <MathText content={q.content} block />
-                            </div>
+                // Real index in original list (optional, but finding index in full list is O(n))
+                // Using q.id logic or mapped index. For simple view let's use the object itself.
+                const originalIndex = questions.findIndex(orig => orig.id === q.id) + 1;
 
-                            {isMCQ && q.options && (
-                                <div className="grid gap-3 md:gap-4 mb-6 md:mb-10">
-                                    {q.options.map((opt, oIdx) => {
-                                        const label = opt.match(/^([A-D])\./)?.[1] || String.fromCharCode(65 + oIdx);
-                                        const isSelected = userAns === label;
-                                        const isCorrectOpt = q.correctAnswer === label;
-                                        
-                                        let style = "border-slate-200 bg-white text-slate-500";
-                                        if (isCorrectOpt) style = "border-emerald-500 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500 shadow-lg shadow-emerald-100";
-                                        else if (isSelected && !isCorrectOpt) style = "border-rose-300 bg-rose-50 text-rose-900";
-
-                                        return (
-                                            <div key={oIdx} className={`p-3 md:p-5 rounded-xl md:rounded-2xl border-2 flex items-start gap-3 md:gap-5 ${style} text-lg md:text-2xl transition-all`}>
-                                                <span className={`font-black min-w-[28px] md:min-w-[36px] flex items-center justify-center rounded-lg h-7 md:h-9 text-base md:text-xl ${isCorrectOpt ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100'}`}>{label}</span>
-                                                <div className="pt-0.5 flex-1 break-words"><MathText content={opt.replace(/^([A-D])\.\s*/, '')} /></div>
-                                                {isSelected && <span className="ml-auto text-xs md:text-sm font-bold uppercase px-2 py-1 md:px-3 md:py-1 bg-black/10 rounded-lg self-center whitespace-nowrap">Bạn chọn</span>}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
-
-                            {!isMCQ && (
-                                <div className="mb-6 md:mb-10 p-4 md:p-6 bg-white border-2 border-slate-200 rounded-xl md:rounded-2xl shadow-sm">
-                                    <div className="text-sm md:text-lg font-bold text-slate-400 mb-2 uppercase tracking-wide">Câu trả lời của bạn</div>
-                                    <div className="text-lg md:text-2xl text-slate-900 font-medium break-words">{userAns || "(Bỏ qua)"}</div>
-                                </div>
-                            )}
-
-                            {q.explanation && (
-                                <div className="bg-white border-l-4 md:border-l-8 border-indigo-500 p-4 md:p-8 rounded-r-xl md:rounded-r-2xl shadow-sm">
-                                    <h4 className="font-bold text-lg md:text-xl text-indigo-700 mb-3 md:mb-6 flex items-center gap-2 md:gap-3 uppercase tracking-wide">
-                                        <Award className="w-5 h-5 md:w-7 md:h-7" /> Lời giải chi tiết
-                                    </h4>
-                                    <div className="text-slate-800 text-lg md:text-2xl leading-relaxed">
-                                        <MathText content={q.explanation} block />
+                return (
+                    <div key={q.id} className="bg-white border border-slate-200 rounded-xl md:rounded-[1.5rem] shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                        <div 
+                            onClick={() => toggleExpand(q.id)}
+                            className="flex items-start md:items-center p-4 md:p-8 cursor-pointer hover:bg-slate-50/80 transition-colors group"
+                        >
+                            <div className="mr-4 md:mr-8 shrink-0 mt-1 md:mt-0">
+                                {isSkipped ? (
+                                    <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 border-2 border-slate-200 group-hover:scale-110 transition-transform">
+                                        <HelpCircle className="w-6 h-6 md:w-8 md:h-8" />
                                     </div>
+                                ) : isCorrect ? (
+                                    <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 border-2 border-emerald-200 group-hover:scale-110 transition-transform">
+                                        <CheckCircle className="w-6 h-6 md:w-8 md:h-8" />
+                                    </div>
+                                ) : (
+                                    <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 border-2 border-rose-200 group-hover:scale-110 transition-transform">
+                                        <XCircle className="w-6 h-6 md:w-8 md:h-8" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-lg md:text-2xl text-slate-800 mb-1 md:mb-2 flex flex-wrap items-center gap-2 md:gap-3">
+                                    Câu {originalIndex} 
+                                    <span className={`text-xs md:text-sm font-bold px-2 py-0.5 md:px-3 md:py-1 rounded-full border 
+                                        ${q.difficulty === 'NB' ? 'bg-green-50 text-green-700 border-green-200' : 
+                                        q.difficulty === 'TH' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                                        q.difficulty === 'VD' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}
+                                    `}>
+                                        {q.difficulty}
+                                    </span>
+                                </h3>
+                                <div className="text-slate-500 text-sm md:text-xl truncate max-w-3xl font-medium">
+                                    {q.content.substring(0, 60)}...
                                 </div>
-                            )}
+                            </div>
+                            <div className="text-slate-300 group-hover:text-indigo-500 transition-colors pl-2 md:pl-4 self-center">
+                                {expandedId === q.id ? <ChevronUp className="w-6 h-6 md:w-9 md:h-9" /> : <ChevronDown className="w-6 h-6 md:w-9 md:h-9" />}
+                            </div>
                         </div>
-                    )}
-                </div>
-            )
-        })}
+
+                        {expandedId === q.id && (
+                            <div className="p-4 md:p-10 border-t-2 border-slate-100 bg-slate-50/50 animate-slide-up">
+                                <div className="mb-6 md:mb-10 text-xl md:text-3xl text-slate-900 leading-relaxed font-medium">
+                                    <MathText content={q.content} block />
+                                </div>
+
+                                {isMCQ && q.options && (
+                                    <div className="grid gap-3 md:gap-4 mb-6 md:mb-10">
+                                        {q.options.map((opt, oIdx) => {
+                                            const label = opt.match(/^([A-D])\./)?.[1] || String.fromCharCode(65 + oIdx);
+                                            const isSelected = userAns === label;
+                                            const isCorrectOpt = q.correctAnswer === label;
+                                            
+                                            let style = "border-slate-200 bg-white text-slate-500";
+                                            if (isCorrectOpt) style = "border-emerald-500 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500 shadow-lg shadow-emerald-100";
+                                            else if (isSelected && !isCorrectOpt) style = "border-rose-300 bg-rose-50 text-rose-900";
+
+                                            return (
+                                                <div key={oIdx} className={`p-3 md:p-5 rounded-xl md:rounded-2xl border-2 flex items-start gap-3 md:gap-5 ${style} text-lg md:text-2xl transition-all`}>
+                                                    <span className={`font-black min-w-[28px] md:min-w-[36px] flex items-center justify-center rounded-lg h-7 md:h-9 text-base md:text-xl ${isCorrectOpt ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100'}`}>{label}</span>
+                                                    <div className="pt-0.5 flex-1 break-words"><MathText content={opt.replace(/^([A-D])\.\s*/, '')} /></div>
+                                                    {isSelected && <span className="ml-auto text-xs md:text-sm font-bold uppercase px-2 py-1 md:px-3 md:py-1 bg-black/10 rounded-lg self-center whitespace-nowrap">Bạn chọn</span>}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+
+                                {!isMCQ && (
+                                    <div className="mb-6 md:mb-10 p-4 md:p-6 bg-white border-2 border-slate-200 rounded-xl md:rounded-2xl shadow-sm">
+                                        <div className="text-sm md:text-lg font-bold text-slate-400 mb-2 uppercase tracking-wide">Câu trả lời của bạn</div>
+                                        <div className="text-lg md:text-2xl text-slate-900 font-medium break-words">{userAns || "(Bỏ qua)"}</div>
+                                    </div>
+                                )}
+
+                                {q.explanation && (
+                                    <div className="bg-white border-l-4 md:border-l-8 border-indigo-500 p-4 md:p-8 rounded-r-xl md:rounded-r-2xl shadow-sm">
+                                        <h4 className="font-bold text-lg md:text-xl text-indigo-700 mb-3 md:mb-6 flex items-center gap-2 md:gap-3 uppercase tracking-wide">
+                                            <Award className="w-5 h-5 md:w-7 md:h-7" /> Lời giải chi tiết
+                                        </h4>
+                                        <div className="text-slate-800 text-lg md:text-2xl leading-relaxed">
+                                            <MathText content={q.explanation} block />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )
+            })
+        )}
       </div>
 
       {/* Footer Actions */}

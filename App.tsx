@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Question, ExamState, ExamConfig } from './types';
+import { Question, ExamState, ExamConfig, QuestionType } from './types';
 import { shuffleArray } from './utils';
 import FileUpload from './components/FileUpload';
 import ExamConfigView from './components/ExamConfigView';
@@ -17,7 +17,7 @@ const App: React.FC = () => {
     config: {
         mode: 'CUSTOM',
         difficulty: 'ALL',
-        questionType: 'ALL',
+        questionTypes: ['MCQ', 'Essay', 'TF', 'SA'], // Default all types
         limit: 20,
         durationMinutes: 30
     }
@@ -49,16 +49,28 @@ const App: React.FC = () => {
         const thQuestions = shuffleArray<Question>(appState.originalQuestions.filter(q => q.difficulty === 'TH')).slice(0, thCount);
         const vdQuestions = shuffleArray<Question>(appState.originalQuestions.filter(q => ['VD', 'VDC'].includes(q.difficulty))).slice(0, vdCount);
 
-        finalQuestions = shuffleArray<Question>([...nbQuestions, ...thQuestions, ...vdQuestions]);
+        finalQuestions = [...nbQuestions, ...thQuestions, ...vdQuestions];
     } else {
         // CUSTOM MODE
         let filtered = appState.originalQuestions.filter(q => {
             const matchDiff = config.difficulty === 'ALL' || q.difficulty === config.difficulty;
-            const matchType = config.questionType === 'ALL' || q.type === config.questionType;
+            const matchType = config.questionTypes.includes(q.type);
             return matchDiff && matchType;
         });
         finalQuestions = shuffleArray<Question>(filtered).slice(0, config.limit);
     }
+
+    // Sort questions by difficulty: NB -> TH -> VD -> VDC
+    const difficultyRank: Record<string, number> = {
+        'NB': 1,
+        'TH': 2,
+        'VD': 3,
+        'VDC': 4
+    };
+
+    finalQuestions.sort((a, b) => {
+        return (difficultyRank[a.difficulty] || 5) - (difficultyRank[b.difficulty] || 5);
+    });
 
     setAppState(prev => ({
       ...prev,
@@ -113,6 +125,7 @@ const App: React.FC = () => {
         <ExamConfigView 
             totalQuestions={appState.originalQuestions} 
             onStart={handleStartExam} 
+            onBack={handleHome}
         />
       )}
 
@@ -130,7 +143,7 @@ const App: React.FC = () => {
             userAnswers={appState.userAnswers}
             timeSpent={timeSpentSeconds}
             onRetry={handleRetry}
-            onHome={handleConfigReset}
+            onHome={handleHome} 
         />
       )}
     </div>

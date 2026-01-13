@@ -14,7 +14,7 @@ export interface Question {
 export interface ExamConfig {
   mode: 'CUSTOM' | 'STANDARD'; // STANDARD = 50-30-20
   difficulty: Difficulty | 'ALL';
-  questionType: QuestionType | 'ALL';
+  questionTypes: QuestionType[]; // Changed to array for multi-select
   limit: number;
   durationMinutes: number;
 }
