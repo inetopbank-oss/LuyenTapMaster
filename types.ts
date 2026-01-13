@@ -14,6 +14,7 @@ export interface Question {
 export interface UserInfo {
   name: string;
   class: string;
+  isAdmin?: boolean;
 }
 
 export interface ExamResultLog {
@@ -34,7 +35,7 @@ export interface ExamConfig {
 }
 
 export interface ExamState {
-  status: 'LOGIN' | 'UPLOAD' | 'CONFIG' | 'RUNNING' | 'RESULT';
+  status: 'LOGIN' | 'UPLOAD' | 'CONFIG' | 'RUNNING' | 'RESULT' | 'ADMIN_DASHBOARD';
   userInfo: UserInfo | null;
   originalQuestions: Question[];
   activeQuestions: Question[];

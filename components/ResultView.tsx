@@ -128,7 +128,7 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
   }
 
   return (
-    <div ref={containerRef} className="h-screen overflow-y-auto bg-slate-50 pb-32 animate-fade-in font-sans relative">
+    <div ref={containerRef} className="fixed inset-0 z-50 overflow-y-auto bg-slate-50 pb-32 animate-fade-in font-sans relative">
       
       {/* Sticky Header with Tabs */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">

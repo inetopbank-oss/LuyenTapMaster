@@ -6,6 +6,7 @@ import ExamConfigView from './components/ExamConfigView';
 import ExamRunner from './components/ExamRunner';
 import ResultView from './components/ResultView';
 import LoginView from './components/LoginView';
+import AdminDashboard from './components/AdminDashboard';
 
 const HISTORY_KEY = 'mathpro_exam_history';
 
@@ -42,9 +43,12 @@ const App: React.FC = () => {
   }, []);
 
   const handleLogin = (info: UserInfo) => {
+      // Check for Admin Credentials
+      const isAdmin = info.name === 'admin' && info.class === 'admin';
+      
       setAppState(prev => ({
           ...prev,
-          userInfo: info,
+          userInfo: { ...info, isAdmin },
           status: 'UPLOAD'
       }));
   };
@@ -52,7 +56,8 @@ const App: React.FC = () => {
   const handleDataLoaded = (questions: Question[]) => {
     setAppState(prev => ({
       ...prev,
-      status: 'CONFIG',
+      // If admin, go to Admin Dashboard, else go to Student Config
+      status: prev.userInfo?.isAdmin ? 'ADMIN_DASHBOARD' : 'CONFIG',
       originalQuestions: questions,
       // Reset other states
       activeQuestions: [],
@@ -162,9 +167,13 @@ const App: React.FC = () => {
       }));
   };
   
-  const handleConfigReset = () => {
-      setAppState(prev => ({ ...prev, status: 'CONFIG' }));
-  }
+  const handleLogout = () => {
+      setAppState(prev => ({
+          ...prev,
+          status: 'LOGIN',
+          userInfo: null
+      }));
+  };
 
   // Determine time spent in seconds
   const timeSpentSeconds = appState.startTime && appState.endTime 
@@ -179,6 +188,13 @@ const App: React.FC = () => {
 
       {appState.status === 'UPLOAD' && (
         <FileUpload onDataLoaded={handleDataLoaded} />
+      )}
+      
+      {appState.status === 'ADMIN_DASHBOARD' && (
+          <AdminDashboard 
+            questionBank={appState.originalQuestions}
+            onLogout={handleLogout}
+          />
       )}
 
       {appState.status === 'CONFIG' && (

@@ -61,7 +61,7 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white font-sans overflow-hidden">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white font-sans overflow-hidden">
       {/* 1. Header - Ultra Compact */}
       <header className="h-12 md:h-14 shrink-0 flex items-center justify-between px-3 md:px-4 border-b border-slate-200 bg-white z-40">
         <div className="flex items-center gap-3">
