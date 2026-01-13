@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Play, BookOpen, Clock, ListFilter, Check, PieChart, PenTool, GraduationCap, Timer, ArrowLeft, FileJson, Database, AlertTriangle } from 'lucide-react';
+import { Settings, Play, BookOpen, Clock, ListFilter, Check, PieChart, PenTool, GraduationCap, Timer, ArrowLeft, FileJson, Database, AlertTriangle, ChevronRight, BarChart3, Zap, Layers } from 'lucide-react';
 import { Question, ExamConfig, Difficulty, QuestionType, DIFFICULTY_LABELS, TYPE_LABELS } from '../types';
 
 interface ExamConfigViewProps {
@@ -13,11 +13,10 @@ const EXAM_PRESETS = [
     { time: 30, questions: 20, label: '30 Phút' },
     { time: 45, questions: 30, label: '45 Phút' },
     { time: 60, questions: 40, label: '60 Phút' },
-    { time: 90, questions: 50, label: '90 Phút' }, // Thi THPT QG
+    { time: 90, questions: 50, label: '90 Phút' },
 ];
 
 const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart, onBack }) => {
-  // Mode 'CUSTOM' maps to 'Luyện tập', 'STANDARD' maps to 'Kiểm tra'
   const [mode, setMode] = useState<'CUSTOM' | 'STANDARD'>('STANDARD'); 
   const allQuestionTypes: QuestionType[] = ['MCQ', 'Essay', 'TF', 'SA'];
 
@@ -25,14 +24,13 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
     mode: 'STANDARD',
     difficulty: 'ALL',
     questionTypes: allQuestionTypes,
-    limit: 30, // Default 45 mins -> 30 questions
+    limit: 30,
     durationMinutes: 45, 
   });
   
   const [maxPossible, setMaxPossible] = useState(0);
   const [matrixCounts, setMatrixCounts] = useState({ nb: 0, th: 0, vd: 0 });
 
-  // Calculate detailed stats for display
   const detailedStats = React.useMemo(() => {
     return {
       NB: totalQuestions.filter(q => q.difficulty === 'NB').length,
@@ -43,7 +41,6 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
     };
   }, [totalQuestions]);
 
-  // Calculate stats for Standard Mode (VD includes VD and VDC)
   const stats = React.useMemo(() => {
     const nb = detailedStats.NB;
     const th = detailedStats.TH;
@@ -69,24 +66,16 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
             setConfig(prev => ({ ...prev, limit: Math.min(20, filtered.length) }));
         }
     } else {
-        // STANDARD MODE: Bottleneck calculation
-        // Requirements: 50% NB, 30% TH, 20% VD/VDC
         const maxNB = Math.floor(stats.nb / 0.5);
         const maxTH = Math.floor(stats.th / 0.3);
         const maxVD = Math.floor(stats.vd / 0.2);
-        
         const calculatedMax = Math.min(maxNB, maxTH, maxVD);
         setMaxPossible(calculatedMax);
-        
-        // Note: In standard mode, we don't auto-clamp the limit here immediately to allow the UI to show "Not enough questions" 
-        // if the preset requires more than available. Validation happens at submit or visual feedback.
     }
   }, [config.difficulty, config.questionTypes, totalQuestions, mode, stats]);
 
-  // Update matrix display counts
   useEffect(() => {
       if (mode === 'STANDARD') {
-          // Whenever limit changes (by preset or clamp), update distribution
           const actualLimit = Math.min(config.limit, maxPossible);
           setMatrixCounts({
               nb: Math.round(actualLimit * 0.5),
@@ -106,7 +95,6 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Final clamp before starting
     const finalLimit = Math.min(config.limit, maxPossible);
     onStart({ ...config, limit: finalLimit });
   };
@@ -117,7 +105,6 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
       setConfig(prev => {
           const current = prev.questionTypes;
           if (current.includes(type)) {
-              // Avoid unchecking the last one? Optionally allow it but result is 0 matches.
               return { ...prev, questionTypes: current.filter(t => t !== type) };
           } else {
               return { ...prev, questionTypes: [...current, type] };
@@ -126,252 +113,254 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 flex justify-center items-center animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl flex flex-col border border-slate-200 overflow-hidden my-auto h-auto max-h-[95vh]">
-        
-        {/* Header */}
-        <div className={`
-            p-5 text-white flex items-center justify-between relative overflow-hidden shrink-0 transition-colors duration-500
-            ${mode === 'STANDARD' ? 'bg-gradient-to-r from-red-600 to-rose-700' : 'bg-gradient-to-r from-indigo-600 to-blue-700'}
-        `}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl"></div>
-          
-          <div className="flex items-center gap-4 z-10">
-              <div className="bg-white/20 p-2.5 rounded-xl backdrop-blur-sm">
-                {mode === 'STANDARD' ? <GraduationCap className="w-6 h-6 text-white" /> : <PenTool className="w-6 h-6 text-white" />}
-              </div>
-              <div>
-                <h2 className="text-xl md:text-2xl font-bold tracking-tight">
-                    {mode === 'STANDARD' ? 'Chế độ Kiểm tra' : 'Chế độ Luyện tập'}
-                </h2>
-                <p className="text-white/80 text-sm font-medium">
-                    {mode === 'STANDARD' ? 'Thi thử theo cấu trúc ma trận chuẩn' : 'Tùy chỉnh kiến thức cần ôn luyện'}
-                </p>
-              </div>
-          </div>
+    <div className="min-h-screen bg-slate-100 flex justify-center items-center p-3 font-sans animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row overflow-hidden max-h-[85vh] md:h-[520px] border border-slate-200">
 
-          <button 
-            type="button"
-            onClick={onBack}
-            className="relative z-10 flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white text-xs md:text-sm font-bold transition-colors border border-white/20"
-            title="Chọn đề khác"
-          >
-              <ArrowLeft size={16} />
-              <span className="hidden sm:inline">Chọn đề khác</span>
-          </button>
-        </div>
-
-        {/* Mode Switcher */}
-        <div className="grid grid-cols-2 p-2 bg-slate-50 border-b border-slate-200 gap-2 shrink-0">
-            <button
-                type="button"
-                onClick={() => setMode('STANDARD')}
-                className={`py-3 px-3 rounded-xl text-sm md:text-base font-bold flex items-center justify-center gap-2 transition-all
-                    ${mode === 'STANDARD' 
-                        ? 'bg-white text-rose-600 shadow-md ring-1 ring-rose-100' 
-                        : 'text-slate-500 hover:bg-white/60 hover:text-slate-700'}`}
-            >
-                <GraduationCap size={20} /> Kiểm tra
-            </button>
-            <button
-                type="button"
-                onClick={() => setMode('CUSTOM')}
-                className={`py-3 px-3 rounded-xl text-sm md:text-base font-bold flex items-center justify-center gap-2 transition-all
-                    ${mode === 'CUSTOM' 
-                        ? 'bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100' 
-                        : 'text-slate-500 hover:bg-white/60 hover:text-slate-700'}`}
-            >
-                <PenTool size={18} /> Luyện tập
-            </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-6 overflow-y-auto">
-
-          {/* Data Statistics */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-slate-800 font-bold text-sm uppercase tracking-wide opacity-80">
-                 <Database className="w-4 h-4" /> Thống kê kho dữ liệu
-            </div>
-            <div className="grid grid-cols-4 gap-2 md:gap-4">
-                <div className="flex flex-col items-center p-2 bg-green-50 border border-green-100 rounded-lg shadow-sm">
-                    <span className="text-[10px] md:text-xs font-bold text-green-600 uppercase mb-0.5">Nhận biết</span>
-                    <span className="text-lg md:text-xl font-black text-green-700">{detailedStats.NB}</span>
-                </div>
-                <div className="flex flex-col items-center p-2 bg-blue-50 border border-blue-100 rounded-lg shadow-sm">
-                    <span className="text-[10px] md:text-xs font-bold text-blue-600 uppercase mb-0.5">Thông hiểu</span>
-                    <span className="text-lg md:text-xl font-black text-blue-700">{detailedStats.TH}</span>
-                </div>
-                <div className="flex flex-col items-center p-2 bg-orange-50 border border-orange-100 rounded-lg shadow-sm">
-                    <span className="text-[10px] md:text-xs font-bold text-orange-600 uppercase mb-0.5">Vận dụng</span>
-                    <span className="text-lg md:text-xl font-black text-orange-700">{detailedStats.VD}</span>
-                </div>
-                <div className="flex flex-col items-center p-2 bg-red-50 border border-red-100 rounded-lg shadow-sm">
-                    <span className="text-[10px] md:text-xs font-bold text-red-600 uppercase mb-0.5">Vận dụng cao</span>
-                    <span className="text-lg md:text-xl font-black text-red-700">{detailedStats.VDC}</span>
+        {/* LEFT SIDEBAR: Context & Mode & Stats */}
+        <div className="w-full md:w-64 bg-slate-50 p-4 md:p-5 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto">
+            {/* Header */}
+            <div className="mb-5">
+                <button onClick={onBack} className="flex items-center gap-1 text-slate-400 hover:text-slate-700 text-xs font-bold mb-3 transition-colors">
+                    <ArrowLeft size={14} /> Quay lại
+                </button>
+                <h1 className="text-xl font-black text-slate-800 tracking-tight">Thiết lập đề</h1>
+                <div className="flex items-center gap-1.5 mt-1 text-slate-500 font-medium text-xs">
+                    <Database size={12} />
+                    <span>Kho: <strong className="text-slate-800">{detailedStats.Total}</strong> câu</span>
                 </div>
             </div>
-          </div>
-          
-          <div className="h-px bg-slate-100 w-full"></div>
 
-          {mode === 'CUSTOM' ? (
-              <div className="animate-fade-in space-y-6">
-                {/* Luyện Tập: Difficulty Selection */}
-                <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-slate-800 font-bold text-base">
-                    <BookOpen className="w-5 h-5 text-indigo-600" />
-                    Mức độ khó
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {(Object.keys(DIFFICULTY_LABELS) as (Difficulty | 'ALL')[]).map((key) => {
-                        const isActive = config.difficulty === key;
-                        return (
-                            <button
-                            key={key}
-                            type="button"
-                            onClick={() => setConfig({ ...config, difficulty: key })}
-                            className={`relative py-2 px-3 rounded-lg border text-sm font-semibold transition-all duration-200 flex items-center justify-between group
-                                ${isActive 
-                                ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm ring-1 ring-indigo-600' 
-                                : 'border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300'}`}
-                            >
-                            <span>{DIFFICULTY_LABELS[key]}</span>
-                            {isActive && <div className="bg-indigo-600 text-white p-0.5 rounded-full"><Check size={12} strokeWidth={3} /></div>}
-                            </button>
-                        );
-                    })}
+            {/* Mode Selection */}
+            <div className="space-y-2 mb-6">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chế độ</label>
+                <button
+                    onClick={() => setMode('STANDARD')}
+                    className={`w-full p-2.5 rounded-lg flex items-center gap-2.5 transition-all text-left group border
+                        ${mode === 'STANDARD' 
+                            ? 'bg-white border-rose-200 shadow-sm' 
+                            : 'bg-slate-100 border-transparent hover:bg-white hover:border-slate-200'}`}
+                >
+                    <div className={`p-1.5 rounded-md shrink-0 ${mode === 'STANDARD' ? 'bg-rose-100 text-rose-600' : 'bg-slate-200 text-slate-500 group-hover:bg-rose-50 group-hover:text-rose-500'}`}>
+                        <GraduationCap size={16} />
                     </div>
-                </div>
-
-                {/* Luyện Tập: Question Type Selection */}
-                <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-slate-800 font-bold text-base">
-                    <ListFilter className="w-5 h-5 text-indigo-600" />
-                    Dạng câu hỏi (Chọn nhiều)
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {allQuestionTypes.map((type) => {
-                        const isActive = config.questionTypes.includes(type);
-                        return (
-                            <button
-                            key={type}
-                            type="button"
-                            onClick={() => toggleQuestionType(type)}
-                            className={`relative py-2 px-3 rounded-lg border text-sm font-semibold transition-all duration-200 flex items-center justify-between group
-                                ${isActive 
-                                ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm ring-1 ring-indigo-600' 
-                                : 'border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300'}`}
-                            >
-                            <span>{TYPE_LABELS[type]}</span>
-                            {isActive && <div className="bg-indigo-600 text-white p-0.5 rounded-full"><Check size={12} strokeWidth={3} /></div>}
-                            </button>
-                        );
-                    })}
+                    <div>
+                        <div className={`font-bold text-sm leading-tight ${mode === 'STANDARD' ? 'text-slate-800' : 'text-slate-600'}`}>Kiểm tra</div>
+                        <div className="text-[10px] text-slate-400">Chuẩn ma trận</div>
                     </div>
-                </div>
-              </div>
-          ) : (
-             <div className="space-y-4">
-                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                     <label className="flex items-center gap-2 text-slate-800 font-bold text-base">
-                        <Timer className="w-5 h-5 text-rose-600" />
-                        Chọn thời gian kiểm tra
-                     </label>
-                     <span className={`text-xs font-bold px-2 py-1 rounded-lg border ${maxPossible > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
-                        Kho đề đáp ứng tối đa: {maxPossible} câu chuẩn
-                     </span>
-                 </div>
-                 
-                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                     {EXAM_PRESETS.map((preset) => {
-                         const isActive = config.durationMinutes === preset.time;
-                         const isInsufficient = preset.questions > maxPossible;
-                         
-                         return (
-                             <button
-                                key={preset.time}
-                                type="button"
-                                onClick={() => handlePresetSelect(preset)}
-                                className={`
-                                    relative p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center gap-1 min-h-[100px]
-                                    ${isActive 
-                                        ? 'border-rose-600 bg-rose-50 text-rose-700 shadow-md scale-105 z-10' 
-                                        : 'border-slate-200 hover:border-rose-200 hover:bg-white'}
-                                    ${isInsufficient && !isActive ? 'opacity-60 bg-slate-50 grayscale-[0.5]' : ''}
-                                    ${isInsufficient && isActive ? 'bg-red-50 border-red-500 text-red-700' : ''}
-                                `}
-                             >
-                                 <span className={`text-lg font-black ${isActive ? (isInsufficient ? 'text-red-600' : 'text-rose-600') : 'text-slate-700'}`}>
-                                    {preset.label}
-                                 </span>
-                                 
-                                 <div className="flex flex-col items-center">
-                                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm border 
-                                        ${isActive 
-                                            ? 'bg-white border-slate-100' 
-                                            : 'bg-slate-100 border-slate-200 text-slate-500'}
-                                     `}>
-                                         {preset.questions} câu
-                                     </span>
-                                     {isInsufficient && (
-                                         <span className="text-[10px] font-bold text-red-500 mt-1 bg-red-100 px-1.5 py-0.5 rounded">
-                                             Thiếu {preset.questions - maxPossible} câu
-                                         </span>
-                                     )}
-                                 </div>
+                </button>
 
-                                 {isActive && <div className={`absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse ${isInsufficient ? 'bg-red-500' : 'bg-rose-600'}`}></div>}
-                             </button>
-                         )
-                     })}
-                 </div>
+                <button
+                    onClick={() => setMode('CUSTOM')}
+                    className={`w-full p-2.5 rounded-lg flex items-center gap-2.5 transition-all text-left group border
+                        ${mode === 'CUSTOM' 
+                            ? 'bg-white border-indigo-200 shadow-sm' 
+                            : 'bg-slate-100 border-transparent hover:bg-white hover:border-slate-200'}`}
+                >
+                     <div className={`p-1.5 rounded-md shrink-0 ${mode === 'CUSTOM' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-200 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
+                        <PenTool size={16} />
+                    </div>
+                    <div>
+                        <div className={`font-bold text-sm leading-tight ${mode === 'CUSTOM' ? 'text-slate-800' : 'text-slate-600'}`}>Luyện tập</div>
+                        <div className="text-[10px] text-slate-400">Tùy chỉnh</div>
+                    </div>
+                </button>
+            </div>
 
-                 {/* Calculated Info for Standard Mode */}
-                 {config.limit > maxPossible ? (
-                     <div className="flex items-start gap-3 p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-sm font-medium animate-pulse">
-                         <div className="bg-white p-1 rounded-full shrink-0"><AlertTriangle size={14} /></div>
-                         <span>
-                             Bạn chọn đề {config.limit} câu, nhưng kho đề chỉ đủ ma trận chuẩn cho <strong>{maxPossible}</strong> câu. 
-                             Hệ thống sẽ tạo đề với {maxPossible} câu.
-                         </span>
-                     </div>
-                 ) : (
-                    <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-                        <div className="text-sm font-bold text-slate-500">Dự kiến phân bổ:</div>
-                        <div className="flex gap-2">
-                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded-lg font-bold text-xs">{matrixCounts.nb} NB</span>
-                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-bold text-xs">{matrixCounts.th} TH</span>
-                            <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-lg font-bold text-xs">{matrixCounts.vd} VD+</span>
+            {/* Mini Stats Grid */}
+            <div className="mt-auto hidden md:block">
+                 <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                        { l: 'NB', v: detailedStats.NB, c: 'text-green-700 bg-green-50' },
+                        { l: 'TH', v: detailedStats.TH, c: 'text-blue-700 bg-blue-50' },
+                        { l: 'VD', v: detailedStats.VD, c: 'text-orange-700 bg-orange-50' },
+                        { l: 'VDC', v: detailedStats.VDC, c: 'text-red-700 bg-red-50' }
+                    ].map((item, i) => (
+                        <div key={i} className={`px-2 py-1.5 rounded-md border border-slate-100/50 shadow-sm ${item.c}`}>
+                            <div className="text-[9px] font-bold uppercase opacity-70">{item.l}</div>
+                            <div className="text-sm font-black leading-tight">{item.v}</div>
                         </div>
-                    </div>
-                 )}
-             </div>
-          )}
+                    ))}
+                 </div>
+            </div>
+        </div>
 
-          <div className="pt-4 border-t border-slate-200">
-             <button 
-                type="submit"
-                disabled={!isValidToStart}
-                className={`w-full py-3.5 rounded-xl text-lg font-bold shadow-lg flex items-center justify-center gap-3 transition-all hover:-translate-y-0.5
-                    ${isValidToStart 
-                        ? (mode === 'STANDARD' 
-                            ? (config.limit > maxPossible ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-orange-200' : 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-rose-200')
-                            : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-indigo-200')
-                        : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
-             >
-                <Play fill="currentColor" className="w-5 h-5" />
-                {mode === 'STANDARD' 
-                    ? (config.limit > maxPossible ? `Bắt đầu với ${maxPossible} câu` : 'Bắt đầu Thi thử') 
-                    : 'Bắt đầu Luyện tập'}
-             </button>
-             {maxPossible === 0 && (
-                 <p className="text-red-500 text-center mt-3 text-sm font-medium bg-red-50 p-2 rounded-lg">
-                     {mode === 'STANDARD' ? 'Không đủ câu hỏi để tạo đề chuẩn (Thiếu câu NB, TH hoặc VD).' : 'Không tìm thấy câu hỏi phù hợp.'}
-                 </p>
-             )}
-          </div>
-        </form>
+        {/* RIGHT MAIN: Configuration Form */}
+        <div className="flex-1 flex flex-col bg-white overflow-hidden relative">
+             <form onSubmit={handleSubmit} className="flex-1 flex flex-col h-full">
+                 <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-5">
+                    {mode === 'STANDARD' ? (
+                        <div className="space-y-5 animate-fade-in">
+                            <div>
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                    <Clock size={14} /> Thời gian & Số lượng câu
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                                    {EXAM_PRESETS.map((preset) => {
+                                        const isActive = config.durationMinutes === preset.time;
+                                        const isInsufficient = preset.questions > maxPossible;
+                                        return (
+                                            <button
+                                                key={preset.time}
+                                                type="button"
+                                                onClick={() => handlePresetSelect(preset)}
+                                                className={`
+                                                    relative p-2.5 rounded-lg border flex flex-col items-start gap-0.5 text-left transition-all
+                                                    ${isActive 
+                                                        ? 'bg-rose-50 border-rose-500 ring-1 ring-rose-500 z-10' 
+                                                        : 'bg-white border-slate-200 hover:border-rose-300 hover:bg-slate-50'}
+                                                    ${isInsufficient && !isActive ? 'opacity-60 grayscale' : ''}
+                                                `}
+                                            >
+                                                <div className="flex justify-between items-center w-full">
+                                                    <span className={`font-bold text-sm ${isActive ? 'text-rose-700' : 'text-slate-700'}`}>{preset.label}</span>
+                                                    {isActive && <Check size={14} className="text-rose-600" />}
+                                                </div>
+                                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isActive ? 'bg-white text-rose-600' : 'bg-slate-100 text-slate-500'}`}>
+                                                    {preset.questions} câu
+                                                </span>
+                                                {isInsufficient && (
+                                                    <div className="absolute top-2 right-2 text-red-500" title="Thiếu câu hỏi">
+                                                        <AlertTriangle size={12} />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                            
+                            {/* Feedback Box */}
+                             {config.limit > maxPossible ? (
+                                <div className="p-3 bg-orange-50 text-orange-800 rounded-lg border border-orange-100 text-sm flex gap-2.5 items-start">
+                                     <AlertTriangle className="shrink-0 text-orange-500 mt-0.5" size={16} />
+                                     <div>
+                                         <span className="font-bold block text-xs uppercase mb-0.5">Không đủ câu hỏi</span>
+                                         <span className="text-xs">Chỉ đủ <strong>{maxPossible}</strong> câu chuẩn (5:3:2). Hệ thống sẽ tự động giảm.</span>
+                                     </div>
+                                </div>
+                            ) : (
+                                <div className="p-3 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex flex-col gap-2">
+                                    <span className="font-bold text-xs uppercase flex items-center gap-1.5"><PieChart size={14} /> Phân bổ ma trận:</span>
+                                    <div className="flex gap-2 text-[10px] md:text-xs font-bold">
+                                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded flex-1 text-center border border-green-200">{matrixCounts.nb} NB</span>
+                                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded flex-1 text-center border border-blue-200">{matrixCounts.th} TH</span>
+                                        <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded flex-1 text-center border border-orange-200">{matrixCounts.vd} VD+</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-6 animate-fade-in">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                {/* Difficulty */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                        <BookOpen size={14} /> Mức độ
+                                    </label>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {(Object.keys(DIFFICULTY_LABELS) as (Difficulty | 'ALL')[]).map((key) => {
+                                            const isActive = config.difficulty === key;
+                                            return (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    onClick={() => setConfig({ ...config, difficulty: key })}
+                                                    className={`px-2.5 py-1.5 rounded-md text-xs font-bold border transition-all
+                                                        ${isActive 
+                                                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' 
+                                                        : 'border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 bg-white'}`}
+                                                >
+                                                    {DIFFICULTY_LABELS[key]}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Question Type */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                        <ListFilter size={14} /> Dạng câu
+                                    </label>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {allQuestionTypes.map((type) => {
+                                            const isActive = config.questionTypes.includes(type);
+                                            return (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    onClick={() => toggleQuestionType(type)}
+                                                    className={`px-2.5 py-1.5 rounded-md text-xs font-bold border transition-all flex items-center gap-1.5
+                                                        ${isActive 
+                                                        ? 'bg-indigo-50 border-indigo-600 text-indigo-700' 
+                                                        : 'border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 bg-white'}`}
+                                                >
+                                                    {isActive && <Check size={12} strokeWidth={3} />}
+                                                    {TYPE_LABELS[type]}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Range Inputs */}
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="font-bold text-slate-700">Số lượng: <span className="text-indigo-600 text-base">{config.limit}</span></span>
+                                        <span className="text-[10px] text-slate-400">Tối đa: {maxPossible}</span>
+                                    </div>
+                                    <input 
+                                        type="range" min="5" max={Math.max(5, maxPossible)} step="1"
+                                        value={config.limit}
+                                        onChange={(e) => setConfig({...config, limit: parseInt(e.target.value)})}
+                                        disabled={maxPossible === 0}
+                                        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-slate-200 accent-indigo-600"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                     <div className="flex justify-between items-center text-xs">
+                                        <span className="font-bold text-slate-700">Thời gian: <span className="text-indigo-600 text-base">{config.durationMinutes}p</span></span>
+                                    </div>
+                                    <input 
+                                        type="range" min="5" max="180" step="5"
+                                        value={config.durationMinutes}
+                                        onChange={(e) => setConfig({...config, durationMinutes: parseInt(e.target.value)})}
+                                        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-slate-200 accent-indigo-600"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                 </div>
+
+                 {/* Footer Action */}
+                 <div className="p-4 md:p-5 border-t border-slate-100 bg-slate-50/50 mt-auto">
+                     <button 
+                        type="submit"
+                        disabled={!isValidToStart}
+                        className={`w-full py-3 rounded-xl text-base font-bold shadow-md flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5
+                            ${isValidToStart 
+                                ? (mode === 'STANDARD' 
+                                    ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:shadow-rose-100 text-white'
+                                    : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:shadow-indigo-100 text-white')
+                                : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                     >
+                        <Zap fill="currentColor" size={18} />
+                        {mode === 'STANDARD' 
+                            ? (config.limit > maxPossible ? `Thi thử (${maxPossible} câu)` : 'Bắt đầu Thi thử') 
+                            : 'Bắt đầu Luyện tập'}
+                     </button>
+                     {maxPossible === 0 && (
+                         <p className="text-red-500 text-center mt-2 text-[10px] font-bold">
+                             * Không tìm thấy câu hỏi phù hợp.
+                         </p>
+                     )}
+                 </div>
+             </form>
+        </div>
+
       </div>
     </div>
   );

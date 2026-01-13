@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, Menu, X, ArrowLeft, ArrowRight, CheckCircle, Flag, ChevronRight } from 'lucide-react';
+import { Clock, Menu, X, ArrowLeft, ArrowRight, CheckCircle, Flag, ChevronRight, HelpCircle, GripVertical } from 'lucide-react';
 import { Question } from '../types';
 import { formatTime } from '../utils';
 import MathText from './MathText';
@@ -61,220 +61,222 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans">
-      {/* Glass Header */}
-      <header className="glass shadow-sm z-30 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shrink-0 absolute top-0 w-full lg:static">
-        <div className="flex items-center gap-3 md:gap-6">
+    <div className="flex flex-col h-screen bg-white font-sans overflow-hidden">
+      {/* 1. Header - Ultra Compact */}
+      <header className="h-12 md:h-14 shrink-0 flex items-center justify-between px-3 md:px-4 border-b border-slate-200 bg-white z-40">
+        <div className="flex items-center gap-3">
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 md:p-3 hover:bg-slate-100 rounded-xl lg:hidden text-slate-700 active:bg-slate-200 transition-colors"
+            className="p-1.5 hover:bg-slate-100 rounded-md lg:hidden text-slate-500 transition-colors"
           >
-            <Menu className="w-6 h-6 md:w-8 md:h-8" />
+            <Menu className="w-5 h-5" />
           </button>
-          <div className="font-black text-xl md:text-3xl text-indigo-600 hidden sm:flex items-center gap-2">
-            MathPro <span className="text-slate-300 font-light">|</span>
-          </div>
-          <div className="text-slate-700 font-bold text-lg md:text-2xl bg-slate-100 px-3 py-1 md:px-4 md:py-1.5 rounded-lg border border-slate-200">
-             Câu <span className="text-indigo-600">{currentIdx + 1}</span> <span className="text-slate-400">/</span> {questions.length}
+          
+          <div className="flex items-center gap-2">
+            <span className="font-black text-indigo-600 text-lg tracking-tight hidden sm:block">MathPro</span>
+            <div className="h-4 w-px bg-slate-200 hidden sm:block"></div>
+            <div className="flex items-baseline gap-1 text-sm font-bold text-slate-600">
+               <span>Câu {currentIdx + 1}</span>
+               <span className="text-slate-300 font-normal">/</span>
+               <span className="text-slate-400 font-normal">{questions.length}</span>
+            </div>
           </div>
         </div>
 
-        <div className={`flex items-center gap-2 md:gap-3 px-3 py-1 md:px-6 md:py-2 rounded-xl font-mono text-xl md:text-3xl font-bold border-2 shadow-sm transition-colors
-            ${timeLeft < 300 ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' : 'bg-white text-indigo-700 border-indigo-100'}`}>
-          <Clock className="w-5 h-5 md:w-8 md:h-8" strokeWidth={2.5} />
+        {/* Timer */}
+        <div className={`
+            flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-base font-bold transition-colors
+            ${timeLeft < 300 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-700'}
+        `}>
+          <Clock className="w-4 h-4 opacity-50" />
           {formatTime(timeLeft)}
         </div>
 
         <button 
           onClick={handleSubmit}
-          className="hidden sm:block px-6 md:px-8 py-2 md:py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-lg md:text-xl transition-all shadow-lg hover:shadow-indigo-200 active:scale-95"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-md font-bold text-sm transition-all shadow-sm"
         >
           Nộp bài
         </button>
-        <button 
-          onClick={handleSubmit}
-          className="sm:hidden px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm"
-        >
-          Nộp
-        </button>
       </header>
 
-      {/* Progress Bar */}
-      <div className="h-1.5 md:h-2 bg-slate-200 w-full z-20 mt-[70px] md:mt-[88px] lg:mt-0">
-        <div 
-          className="h-full bg-indigo-500 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(99,102,241,0.5)]"
-          style={{ width: `${progress}%` }}
-        ></div>
+      {/* Progress Line */}
+      <div className="h-0.5 w-full bg-slate-100 z-30">
+        <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
       </div>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Sidebar */}
+        
+        {/* 2. Sidebar - Narrow & Clean */}
         <aside className={`
-            absolute lg:relative inset-y-0 left-0 z-20 w-80 lg:w-96 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl lg:shadow-none
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            absolute lg:relative inset-y-0 left-0 z-30 w-64 bg-slate-50 border-r border-slate-200 flex flex-col transform transition-transform duration-200 ease-in-out
+            ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
         `}>
-          <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center lg:hidden bg-slate-50">
-            <h3 className="font-bold text-xl md:text-2xl text-slate-700">Danh sách câu hỏi</h3>
-            <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-white rounded-lg"><X className="w-6 h-6 md:w-8 md:h-8" /></button>
+          <div className="p-3 border-b border-slate-200 flex justify-between items-center lg:hidden">
+            <span className="font-bold text-sm text-slate-500 uppercase tracking-wider">Danh sách câu</span>
+            <button onClick={() => setSidebarOpen(false)} className="p-1 text-slate-400"><X className="w-4 h-4" /></button>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 grid grid-cols-5 md:grid-cols-4 gap-2 md:gap-3 content-start bg-slate-50/50">
-            {questions.map((q, idx) => {
-              const isAnswered = !!answers[q.id];
-              const isCurrent = currentIdx === idx;
-              const isFlagged = flagged.has(q.id);
-              
-              return (
-                <button
-                  key={q.id}
-                  onClick={() => { setCurrentIdx(idx); setSidebarOpen(false); }}
-                  className={`
-                    aspect-square rounded-xl md:rounded-2xl text-lg md:text-xl font-bold flex items-center justify-center relative shadow-sm transition-all duration-200
-                    ${isCurrent 
-                        ? 'bg-indigo-600 text-white ring-2 md:ring-4 ring-indigo-200 scale-105 z-10' 
-                        : isAnswered 
-                            ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-200 hover:bg-indigo-200' 
-                            : 'bg-white text-slate-500 border-2 border-slate-200 hover:bg-white hover:border-slate-300'}
-                  `}
-                >
-                  {idx + 1}
-                  {isFlagged && <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-orange-500 rounded-full border-2 border-white shadow-sm"></div>}
-                </button>
-              );
-            })}
+          <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
+            <div className="grid grid-cols-5 gap-1.5">
+                {questions.map((q, idx) => {
+                const isAnswered = !!answers[q.id];
+                const isCurrent = currentIdx === idx;
+                const isFlagged = flagged.has(q.id);
+                
+                return (
+                    <button
+                    key={q.id}
+                    onClick={() => { setCurrentIdx(idx); setSidebarOpen(false); }}
+                    className={`
+                        h-9 rounded-md text-xs font-bold flex items-center justify-center relative transition-all
+                        ${isCurrent 
+                            ? 'bg-indigo-600 text-white shadow-sm' 
+                            : isAnswered 
+                                ? 'bg-indigo-100 text-indigo-700' 
+                                : 'bg-white text-slate-400 border border-slate-200 hover:border-slate-300'}
+                    `}
+                    >
+                    {idx + 1}
+                    {isFlagged && <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-orange-500 rounded-full"></div>}
+                    </button>
+                );
+                })}
+            </div>
           </div>
           
-          <div className="p-4 md:p-6 border-t border-slate-200 bg-white text-xs md:text-sm font-bold text-slate-600 space-y-2 md:space-y-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-            <div className="flex items-center gap-3">
-                <div className="w-4 h-4 md:w-5 md:h-5 bg-indigo-600 rounded-md shadow-sm"></div> Đang làm
-            </div>
-            <div className="flex items-center gap-3">
-                <div className="w-4 h-4 md:w-5 md:h-5 bg-indigo-100 border-2 border-indigo-200 rounded-md"></div> Đã trả lời
-            </div>
-            <div className="flex items-center gap-3">
-                <div className="w-4 h-4 md:w-5 md:h-5 bg-white border-2 border-slate-200 rounded-md"></div> Chưa trả lời
-            </div>
+          <div className="p-3 border-t border-slate-200 bg-slate-100/50 flex justify-between gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+             <div className="flex items-center gap-1.5"><div className="w-2 h-2 bg-indigo-600 rounded-sm"></div>Đang xem</div>
+             <div className="flex items-center gap-1.5"><div className="w-2 h-2 bg-indigo-100 rounded-sm"></div>Đã làm</div>
+             <div className="flex items-center gap-1.5"><div className="w-2 h-2 bg-white border border-slate-300 rounded-sm"></div>Chưa làm</div>
           </div>
         </aside>
 
-        {/* Main Area */}
-        <main className="flex-1 overflow-y-auto bg-slate-100 p-3 md:p-6 lg:p-10 pb-24 md:pb-32 scroll-smooth">
-          <div className="max-w-6xl mx-auto space-y-4 md:space-y-8 animate-fade-in">
+        {/* 3. Main Content - Seamless & Focused */}
+        <main className="flex-1 flex flex-col bg-white overflow-hidden relative">
+          <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 pb-20 max-w-4xl mx-auto w-full">
             
-            {/* Question Card */}
-            <div className="bg-white rounded-2xl md:rounded-[2rem] shadow-xl border border-white overflow-hidden">
-              <div className="bg-gradient-to-r from-slate-50 to-white px-5 py-4 md:px-8 md:py-6 border-b border-slate-100 flex justify-between items-center">
-                <span className="font-extrabold text-slate-700 text-xl md:text-3xl tracking-tight">Câu hỏi {currentIdx + 1}</span>
+            {/* Question Header Row */}
+            <div className="flex items-start justify-between mb-6">
+                <div>
+                    <h2 className="text-base font-bold text-slate-400 uppercase tracking-wider mb-1">Câu hỏi {currentIdx + 1}</h2>
+                    <div className="flex gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wide
+                            ${currentQ.difficulty === 'NB' ? 'bg-green-50 text-green-700 border-green-200' : 
+                              currentQ.difficulty === 'TH' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                              currentQ.difficulty === 'VD' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}
+                        `}>
+                            {currentQ.difficulty}
+                        </span>
+                        {flagged.has(currentQ.id) && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200 flex items-center gap-1">
+                                <Flag size={10} fill="currentColor" /> Đã đánh dấu
+                            </span>
+                        )}
+                    </div>
+                </div>
                 <button 
                     onClick={() => toggleFlag(currentQ.id)}
-                    className={`flex items-center gap-2 md:gap-3 px-3 py-1.5 md:px-6 md:py-2.5 rounded-full text-sm md:text-lg font-bold transition-all
-                    ${flagged.has(currentQ.id) 
-                        ? 'bg-orange-50 text-orange-600 ring-2 ring-orange-200 shadow-sm' 
-                        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
+                    className={`p-2 rounded-full transition-colors ${flagged.has(currentQ.id) ? 'text-orange-500 bg-orange-50' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'}`}
+                    title="Đánh dấu câu hỏi"
                 >
-                    <Flag className="w-4 h-4 md:w-6 md:h-6" fill={flagged.has(currentQ.id) ? "currentColor" : "none"} />
-                    {flagged.has(currentQ.id) ? <span className="hidden md:inline">Đã đánh dấu</span> : <span className="hidden md:inline">Đánh dấu</span>}
+                    <Flag className="w-5 h-5" fill={flagged.has(currentQ.id) ? "currentColor" : "none"} />
                 </button>
-              </div>
-              
-              <div className="p-5 md:p-8 lg:p-12">
-                 {/* Responsive Prose: Base on mobile, 2XL on large screens */}
-                 <div className="prose prose-base md:prose-xl lg:prose-2xl max-w-none text-slate-800 mb-6 md:mb-12 leading-relaxed font-medium">
-                   <MathText content={currentQ.content} block />
-                 </div>
-
-                 {currentQ.type === 'MCQ' && currentQ.options && (
-                   <div className="grid grid-cols-1 gap-3 md:gap-5">
-                     {currentQ.options.map((opt, optIdx) => {
-                       const label = getOptionLabel(opt, optIdx);
-                       const content = getOptionContent(opt);
-                       const isSelected = answers[currentQ.id] === label;
-
-                       return (
-                         <label 
-                            key={optIdx} 
-                            className={`
-                                relative flex items-start md:items-center gap-4 md:gap-6 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 cursor-pointer transition-all duration-200 group
-                                ${isSelected 
-                                    ? 'border-indigo-600 bg-indigo-50/50 shadow-lg scale-[1.01] z-10' 
-                                    : 'border-slate-200 hover:border-indigo-300 hover:bg-white hover:shadow-md'}
-                            `}
-                         >
-                           <input 
-                              type="radio" 
-                              name={`q-${currentQ.id}`}
-                              value={label}
-                              checked={isSelected}
-                              onChange={() => handleSelectAnswer(label)}
-                              className="sr-only"
-                           />
-                           {/* Label Circle */}
-                           <div className={`
-                                w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-lg md:text-2xl shrink-0 transition-all border-2 mt-1 md:mt-0
-                                ${isSelected 
-                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' 
-                                    : 'bg-slate-50 text-slate-500 border-slate-200 group-hover:bg-indigo-100 group-hover:text-indigo-600 group-hover:border-indigo-200'}
-                           `}>
-                               {label}
-                           </div>
-                           
-                           {/* Content */}
-                           <div className="flex-1 text-lg md:text-3xl text-slate-800 leading-snug group-hover:text-indigo-900 transition-colors pt-1.5 md:pt-0">
-                               <MathText content={content} />
-                           </div>
-
-                           {/* Check Icon */}
-                           <div className={`
-                                hidden md:flex w-8 h-8 rounded-full border-2 items-center justify-center transition-all shrink-0
-                                ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 text-transparent group-hover:border-indigo-300'}
-                           `}>
-                               <CheckCircle size={20} fill="currentColor" className="text-white" />
-                           </div>
-                         </label>
-                       );
-                     })}
-                   </div>
-                 )}
-
-                 {currentQ.type !== 'MCQ' && (
-                     <div className="mt-4 md:mt-8">
-                         <textarea 
-                            placeholder="Nhập câu trả lời của bạn..."
-                            className="w-full h-40 md:h-56 p-4 md:p-6 text-lg md:text-2xl border-2 border-slate-300 rounded-2xl md:rounded-3xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all resize-none shadow-inner"
-                            value={answers[currentQ.id] || ''}
-                            onChange={(e) => setAnswers(prev => ({ ...prev, [currentQ.id]: e.target.value }))}
-                         ></textarea>
-                     </div>
-                 )}
-              </div>
             </div>
 
-            {/* Navigation Buttons */}
-            <div className="flex justify-between pt-2 md:pt-4 gap-4">
+            {/* Question Text */}
+            <div className="prose prose-base md:prose-lg max-w-none text-slate-800 mb-8 font-medium leading-relaxed">
+                <MathText content={currentQ.content} block />
+            </div>
+
+            {/* Answer Options */}
+            {currentQ.type === 'MCQ' && currentQ.options && (
+                <div className="space-y-2.5">
+                    {currentQ.options.map((opt, optIdx) => {
+                    const label = getOptionLabel(opt, optIdx);
+                    const content = getOptionContent(opt);
+                    const isSelected = answers[currentQ.id] === label;
+
+                    return (
+                        <label 
+                        key={optIdx} 
+                        className={`
+                            group relative flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-150
+                            ${isSelected 
+                                ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600 z-10' 
+                                : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'}
+                        `}
+                        >
+                        <input 
+                            type="radio" 
+                            name={`q-${currentQ.id}`}
+                            value={label}
+                            checked={isSelected}
+                            onChange={() => handleSelectAnswer(label)}
+                            className="sr-only"
+                        />
+                        {/* Option Label (A, B, C...) */}
+                        <div className={`
+                            w-7 h-7 rounded flex items-center justify-center font-bold text-sm shrink-0 transition-colors mt-0.5 border
+                            ${isSelected 
+                                ? 'bg-indigo-600 text-white border-indigo-600' 
+                                : 'bg-slate-100 text-slate-500 border-slate-200 group-hover:bg-white group-hover:border-indigo-200 group-hover:text-indigo-600'}
+                        `}>
+                            {label}
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="flex-1 text-base text-slate-700 group-hover:text-indigo-900 pt-0.5">
+                            <MathText content={content} />
+                        </div>
+
+                        {/* Selection Indicator */}
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center mt-1 transition-all
+                             ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-transparent'}
+                        `}>
+                            {isSelected && <CheckCircle size={12} strokeWidth={4} />}
+                        </div>
+                        </label>
+                    );
+                    })}
+                </div>
+            )}
+
+            {currentQ.type !== 'MCQ' && (
+                <textarea 
+                    placeholder="Nhập câu trả lời của bạn..."
+                    className="w-full h-40 p-4 text-base border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all resize-none bg-slate-50 focus:bg-white"
+                    value={answers[currentQ.id] || ''}
+                    onChange={(e) => setAnswers(prev => ({ ...prev, [currentQ.id]: e.target.value }))}
+                ></textarea>
+            )}
+          </div>
+
+          {/* 4. Bottom Navigation - Sticky Footer inside Main */}
+          <div className="border-t border-slate-100 bg-white/95 backdrop-blur-sm p-3 md:px-8 absolute bottom-0 left-0 right-0 z-20 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
                <button 
                  onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
                  disabled={currentIdx === 0}
-                 className="flex-1 md:flex-none flex items-center justify-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-2xl text-base md:text-xl font-bold hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-transform active:scale-95"
+                 className="flex items-center gap-2 px-4 py-2 rounded-md font-bold text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
                >
-                 <ArrowLeft className="w-5 h-5 md:w-7 md:h-7" /> <span className="hidden sm:inline">Trước</span>
+                 <ArrowLeft size={16} /> <span className="hidden sm:inline">Câu trước</span>
                </button>
                
                {currentIdx < questions.length - 1 ? (
                    <button 
                     onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
-                    className="flex-1 md:flex-none group flex items-center justify-center gap-2 md:gap-3 px-6 md:px-10 py-3 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl text-base md:text-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all hover:pr-6 md:hover:pr-8"
+                    className="flex items-center gap-2 px-5 py-2 rounded-md font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm hover:translate-x-0.5 transition-all"
                   >
-                    Tiếp theo <ArrowRight className="w-5 h-5 md:w-7 md:h-7 group-hover:translate-x-1 transition-transform" />
+                    <span>Câu tiếp theo</span> <ArrowRight size={16} />
                   </button>
                ) : (
                    <button 
                     onClick={handleSubmit}
-                    className="flex-1 md:flex-none group flex items-center justify-center gap-2 md:gap-3 px-6 md:px-12 py-3 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl text-lg md:text-2xl font-bold hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all hover:-translate-y-1"
+                    className="flex items-center gap-2 px-5 py-2 rounded-md font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm hover:-translate-y-0.5 transition-all"
                   >
-                    Hoàn thành <CheckCircle className="w-6 h-6 md:w-8 md:h-8 group-hover:scale-110 transition-transform" />
+                    <span>Hoàn thành</span> <CheckCircle size={16} />
                   </button>
                )}
-            </div>
           </div>
         </main>
       </div>

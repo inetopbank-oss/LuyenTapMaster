@@ -57,8 +57,22 @@ export function normalizeQuestions(input: any): Question[] {
     const difficulty: Difficulty = DIFFICULTY_MAP[diffInput] || 'NB';
 
     // Normalize Correct Answer
-    // Prefer correctOptionId if available, otherwise use correctAnswer
-    const correctAnswer = q.correctOptionId || q.correctAnswer || '';
+    // Logic: 
+    // 1. If correctOptionId is present and is a number, map it to A, B, C...
+    // 2. If correctOptionId is a string, use it.
+    // 3. Fallback to correctAnswer field.
+    let correctAnswer = '';
+    
+    if (typeof q.correctOptionId === 'number') {
+        correctAnswer = String.fromCharCode(65 + q.correctOptionId);
+    } else if (q.correctOptionId !== undefined && q.correctOptionId !== null) {
+        correctAnswer = String(q.correctOptionId);
+    } else if (q.correctAnswer !== undefined && q.correctAnswer !== null) {
+        correctAnswer = String(q.correctAnswer);
+    }
+
+    // Normalize Explanation: Check common field names
+    const explanation = q.explanation || q.solution || q.loigiai || q.loi_giai || q.guide || q.huongdan || '';
 
     return {
       id: q.id ? String(q.id) : `q-${index}`,
@@ -67,7 +81,7 @@ export function normalizeQuestions(input: any): Question[] {
       difficulty: difficulty,
       options: options,
       correctAnswer: correctAnswer,
-      explanation: q.explanation || ''
+      explanation: explanation
     };
   });
 }
