@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, Menu, X, ArrowLeft, ArrowRight, CheckCircle, Flag, ChevronRight, HelpCircle, GripVertical } from 'lucide-react';
+import { Clock, Menu, X, ArrowLeft, ArrowRight, CheckCircle, Flag, Award, AlertCircle, Type, Minus, Plus } from 'lucide-react';
 import { Question } from '../types';
 import { formatTime } from '../utils';
 import MathText from './MathText';
@@ -8,14 +8,18 @@ interface ExamRunnerProps {
   questions: Question[];
   durationMinutes: number;
   onComplete: (answers: Record<string, string>, timeSpent: number) => void;
+  mode: 'CUSTOM' | 'STANDARD';
 }
 
-const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onComplete }) => {
+const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onComplete, mode }) => {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(durationMinutes * 60);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
+  
+  // Font Size State (Default 18px)
+  const [fontSize, setFontSize] = useState<number>(18);
 
   // Timer Effect
   useEffect(() => {
@@ -37,6 +41,10 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
   }, [answers, durationMinutes, timeLeft, onComplete]);
 
   const handleSelectAnswer = (optionKey: string) => {
+    // In Custom/Practice mode, prevent changing answer once selected
+    if (mode === 'CUSTOM' && answers[questions[currentIdx].id]) {
+        return;
+    }
     setAnswers(prev => ({ ...prev, [questions[currentIdx].id]: optionKey }));
   };
 
@@ -45,6 +53,13 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
       if(newFlagged.has(id)) newFlagged.delete(id);
       else newFlagged.add(id);
       setFlagged(newFlagged);
+  }
+
+  const changeFontSize = (delta: number) => {
+      setFontSize(prev => {
+          const newState = prev + delta;
+          return Math.max(14, Math.min(32, newState)); // Limit between 14px and 32px
+      });
   }
 
   const currentQ = questions[currentIdx];
@@ -58,6 +73,10 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
   
   const getOptionContent = (opt: string) => {
        return opt.replace(/^([A-D])\.\s*/, '');
+  };
+
+  const normalizeAnswer = (val: string | undefined | null) => {
+      return String(val || '').trim().replace('.', '').toUpperCase();
   };
 
   return (
@@ -83,21 +102,47 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
           </div>
         </div>
 
-        {/* Timer */}
-        <div className={`
-            flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-base font-bold transition-colors
-            ${timeLeft < 300 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-700'}
-        `}>
-          <Clock className="w-4 h-4 opacity-50" />
-          {formatTime(timeLeft)}
-        </div>
+        <div className="flex items-center gap-2 md:gap-4">
+            {/* Font Size Control - Hidden on very small screens if needed, but useful */}
+            <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                <button 
+                    onClick={() => changeFontSize(-2)} 
+                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-md transition-all disabled:opacity-30"
+                    disabled={fontSize <= 14}
+                    title="Giảm cỡ chữ"
+                >
+                    <Minus size={14} strokeWidth={3} />
+                </button>
+                <div className="flex items-center justify-center w-8 text-[10px] font-bold text-slate-600 select-none">
+                    <Type size={12} className="mr-0.5" />
+                    {fontSize}
+                </div>
+                <button 
+                    onClick={() => changeFontSize(2)} 
+                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-md transition-all disabled:opacity-30"
+                    disabled={fontSize >= 32}
+                    title="Tăng cỡ chữ"
+                >
+                    <Plus size={14} strokeWidth={3} />
+                </button>
+            </div>
 
-        <button 
-          onClick={handleSubmit}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-md font-bold text-sm transition-all shadow-sm"
-        >
-          Nộp bài
-        </button>
+            {/* Timer */}
+            <div className={`
+                flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-base font-bold transition-colors hidden sm:flex
+                ${timeLeft < 300 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-700'}
+            `}>
+                <Clock className="w-4 h-4 opacity-50" />
+                {formatTime(timeLeft)}
+            </div>
+
+            <button 
+            onClick={handleSubmit}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-md font-bold text-sm transition-all shadow-sm"
+            >
+            Nộp bài
+            </button>
+        </div>
       </header>
 
       {/* Progress Line */}
@@ -124,6 +169,14 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
                 const isCurrent = currentIdx === idx;
                 const isFlagged = flagged.has(q.id);
                 
+                // In Practice mode, show correct/incorrect status in sidebar if answered
+                let statusColor = "";
+                if (mode === 'CUSTOM' && isAnswered) {
+                     const userAns = normalizeAnswer(answers[q.id]);
+                     const correctAns = normalizeAnswer(q.correctAnswer);
+                     statusColor = userAns === correctAns ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700";
+                }
+
                 return (
                     <button
                     key={q.id}
@@ -133,7 +186,7 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
                         ${isCurrent 
                             ? 'bg-indigo-600 text-white shadow-sm' 
                             : isAnswered 
-                                ? 'bg-indigo-100 text-indigo-700' 
+                                ? (mode === 'CUSTOM' ? statusColor : 'bg-indigo-100 text-indigo-700') 
                                 : 'bg-white text-slate-400 border border-slate-200 hover:border-slate-300'}
                     `}
                     >
@@ -184,61 +237,127 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
                 </button>
             </div>
 
-            {/* Question Text */}
-            <div className="prose prose-base md:prose-lg max-w-none text-slate-800 mb-8 font-medium leading-relaxed">
+            {/* Question Text - Dynamic Font Size */}
+            <div 
+                className="prose prose-slate max-w-none text-slate-800 mb-8 font-medium leading-relaxed"
+                style={{ fontSize: `${fontSize}px`, lineHeight: 1.6 }}
+            >
                 <MathText content={currentQ.content} block />
             </div>
 
-            {/* Answer Options */}
+            {/* Answer Options - Refined Layout "Gọn Đẹp" */}
             {currentQ.type === 'MCQ' && currentQ.options && (
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                     {currentQ.options.map((opt, optIdx) => {
                     const label = getOptionLabel(opt, optIdx);
                     const content = getOptionContent(opt);
+                    
                     const isSelected = answers[currentQ.id] === label;
+                    
+                    // Practice Mode Logic
+                    const isPractice = mode === 'CUSTOM';
+                    const hasAnswered = !!answers[currentQ.id];
+                    const isCorrectOption = normalizeAnswer(label) === normalizeAnswer(currentQ.correctAnswer);
+                    
+                    // Default State
+                    let containerStyle = 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50 text-slate-700';
+                    let labelStyle = 'bg-slate-100 text-slate-500 border-slate-200';
+                    let statusIndicator = null;
+
+                    if (isPractice && hasAnswered) {
+                         if (isSelected && isCorrectOption) {
+                             // User chose Correct
+                             containerStyle = 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500 z-10';
+                             labelStyle = 'bg-emerald-500 text-white border-emerald-500';
+                             statusIndicator = <CheckCircle size={fontSize + 2} className="text-emerald-500" />;
+                         } else if (isSelected && !isCorrectOption) {
+                             // User chose Wrong
+                             containerStyle = 'border-rose-500 bg-rose-50/50 ring-1 ring-rose-500 z-10';
+                             labelStyle = 'bg-rose-500 text-white border-rose-500';
+                             // statusIndicator = <XCircle size={18} className="text-rose-500" />;
+                         } else if (!isSelected && isCorrectOption) {
+                             // The Actual Correct Option (User missed)
+                             containerStyle = 'border-emerald-500 bg-emerald-50/30 border-dashed';
+                             labelStyle = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                             statusIndicator = <CheckCircle size={fontSize + 2} className="text-emerald-500 opacity-60" />;
+                         } else {
+                             // Other inactive options
+                             containerStyle = 'border-slate-100 bg-slate-50 opacity-40 grayscale';
+                         }
+                    } else if (isSelected) {
+                        // Standard Mode selection
+                        containerStyle = 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600 z-10';
+                        labelStyle = 'bg-indigo-600 text-white border-indigo-600';
+                    }
 
                     return (
                         <label 
                         key={optIdx} 
                         className={`
-                            group relative flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-150
-                            ${isSelected 
-                                ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600 z-10' 
-                                : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'}
+                            group relative flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200
+                            ${containerStyle}
                         `}
                         >
-                        <input 
-                            type="radio" 
-                            name={`q-${currentQ.id}`}
-                            value={label}
-                            checked={isSelected}
-                            onChange={() => handleSelectAnswer(label)}
-                            className="sr-only"
-                        />
-                        {/* Option Label (A, B, C...) */}
-                        <div className={`
-                            w-7 h-7 rounded flex items-center justify-center font-bold text-sm shrink-0 transition-colors mt-0.5 border
-                            ${isSelected 
-                                ? 'bg-indigo-600 text-white border-indigo-600' 
-                                : 'bg-slate-100 text-slate-500 border-slate-200 group-hover:bg-white group-hover:border-indigo-200 group-hover:text-indigo-600'}
-                        `}>
-                            {label}
-                        </div>
-                        
-                        {/* Content */}
-                        <div className="flex-1 text-base text-slate-700 group-hover:text-indigo-900 pt-0.5">
-                            <MathText content={content} />
-                        </div>
+                            <input 
+                                type="radio" 
+                                name={`q-${currentQ.id}`}
+                                value={label}
+                                checked={isSelected}
+                                onChange={() => handleSelectAnswer(label)}
+                                disabled={isPractice && hasAnswered}
+                                className="sr-only"
+                            />
+                            
+                            {/* Letter Box (A, B, C...) - Fixed size for alignment */}
+                            <div className={`
+                                w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 transition-colors mt-0.5 border
+                                ${labelStyle}
+                            `}>
+                                {label}
+                            </div>
+                            
+                            {/* Option Content - Dynamic Font Size */}
+                            <div className="flex-1 min-w-0 pt-1" style={{ fontSize: `${fontSize}px` }}>
+                                <MathText content={content} />
+                            </div>
 
-                        {/* Selection Indicator */}
-                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center mt-1 transition-all
-                             ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-transparent'}
-                        `}>
-                            {isSelected && <CheckCircle size={12} strokeWidth={4} />}
-                        </div>
+                            {/* Status Indicator */}
+                            {statusIndicator && (
+                                <div className="shrink-0 mt-1.5 animate-fade-in">
+                                    {statusIndicator}
+                                </div>
+                            )}
                         </label>
                     );
                     })}
+                </div>
+            )}
+            
+            {/* Practice Mode: Immediate Explanation */}
+            {mode === 'CUSTOM' && answers[currentQ.id] && (
+                <div className="mt-8 animate-fade-in">
+                    <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                        <div className="flex items-center gap-2 mb-4">
+                            <h4 className="font-bold text-indigo-700 uppercase tracking-wide text-xs flex items-center gap-2">
+                                <Award size={16} /> Lời giải chi tiết
+                            </h4>
+                            {currentQ.correctAnswer && (
+                                <span className="text-xs font-bold text-white bg-indigo-600 px-2 py-0.5 rounded ml-auto">
+                                    Đáp án đúng: {currentQ.correctAnswer}
+                                </span>
+                            )}
+                        </div>
+                        
+                        {currentQ.explanation ? (
+                            <div className="prose prose-slate max-w-none" style={{ fontSize: `${fontSize}px` }}>
+                                <MathText content={currentQ.explanation} block />
+                            </div>
+                        ) : (
+                            <div className="text-slate-400 italic text-sm flex items-center gap-2">
+                                <AlertCircle size={16} /> Chưa có lời giải chi tiết cho câu hỏi này.
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -248,6 +367,7 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, durationMinutes, onC
                     className="w-full h-40 p-4 text-base border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all resize-none bg-slate-50 focus:bg-white"
                     value={answers[currentQ.id] || ''}
                     onChange={(e) => setAnswers(prev => ({ ...prev, [currentQ.id]: e.target.value }))}
+                    style={{ fontSize: `${fontSize}px` }}
                 ></textarea>
             )}
           </div>

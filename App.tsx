@@ -91,17 +91,20 @@ const App: React.FC = () => {
         finalQuestions = shuffleArray<Question>(filtered).slice(0, config.limit);
     }
 
-    // Sort questions by difficulty: NB -> TH -> VD -> VDC
-    const difficultyRank: Record<string, number> = {
-        'NB': 1,
-        'TH': 2,
-        'VD': 3,
-        'VDC': 4
-    };
+    // Sort questions by difficulty ONLY in STANDARD mode. 
+    // In CUSTOM mode, we want random order (shuffled above).
+    if (config.mode === 'STANDARD') {
+        const difficultyRank: Record<string, number> = {
+            'NB': 1,
+            'TH': 2,
+            'VD': 3,
+            'VDC': 4
+        };
 
-    finalQuestions.sort((a, b) => {
-        return (difficultyRank[a.difficulty] || 5) - (difficultyRank[b.difficulty] || 5);
-    });
+        finalQuestions.sort((a, b) => {
+            return (difficultyRank[a.difficulty] || 5) - (difficultyRank[b.difficulty] || 5);
+        });
+    }
 
     setAppState(prev => ({
       ...prev,
@@ -210,6 +213,7 @@ const App: React.FC = () => {
             questions={appState.activeQuestions}
             durationMinutes={appState.config.durationMinutes}
             onComplete={handleCompleteExam}
+            mode={appState.config.mode}
         />
       )}
 
