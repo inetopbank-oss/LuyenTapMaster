@@ -146,12 +146,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
         )}
 
         {/* Footer Note */}
-        <div className="pt-8 flex justify-center gap-6 opacity-40 hover:opacity-100 transition-opacity">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
-                <FileJson size={18} /> Định dạng JSON
+        <div className="pt-8 flex flex-col items-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
+            <div className="flex justify-center gap-6">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+                    <FileJson size={18} /> Định dạng JSON
+                </div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+                    <BookOpen size={18} /> Ma trận chuẩn
+                </div>
             </div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
-                <BookOpen size={18} /> Ma trận chuẩn
+            <div className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+                Phiên bản v1.2.0
             </div>
         </div>
       </div>

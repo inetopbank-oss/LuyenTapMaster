@@ -97,6 +97,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             </form>
         </div>
         
+        <div className="mt-8 text-center">
+            <p className="text-slate-300 text-xs font-bold tracking-widest uppercase opacity-80">
+                Phiên bản v1.2.0
+            </p>
+        </div>
+
       </div>
     </div>
   );
