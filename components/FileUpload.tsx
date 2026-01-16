@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { Upload, FileJson, AlertCircle, Sparkles, BookOpen } from 'lucide-react';
 import { normalizeQuestions } from '../utils';
 import { Question } from '../types';
@@ -10,6 +10,7 @@ interface FileUploadProps {
 const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFile = (file: File) => {
     setError(null);
@@ -59,6 +60,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
     if (e.target.files && e.target.files[0]) {
       processFile(e.target.files[0]);
     }
+    // Reset input value to allow uploading the same file again if needed
+    if (e.target) {
+        e.target.value = '';
+    }
+  };
+
+  const handleZoneClick = () => {
+      fileInputRef.current?.click();
   };
 
   return (
@@ -83,21 +92,23 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
 
         {/* Upload Zone */}
         <div
+          onClick={handleZoneClick}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={`
-            relative group border-3 border-dashed rounded-[2.5rem] p-12 md:p-16 transition-all duration-300 ease-out cursor-pointer bg-white
+            relative group border-4 border-dashed rounded-[2.5rem] p-12 md:p-16 transition-all duration-300 ease-out cursor-pointer bg-white
             ${isDragging 
                 ? 'border-indigo-500 bg-indigo-50/30 scale-[1.02] shadow-xl' 
                 : 'border-slate-200 hover:border-indigo-400 hover:shadow-xl hover:-translate-y-1'}
           `}
         >
           <input
+            ref={fileInputRef}
             type="file"
-            accept=".json"
+            accept=".json,application/json"
             onChange={handleInputChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            className="hidden"
           />
           
           <div className="flex flex-col items-center gap-6 pointer-events-none">
@@ -113,8 +124,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
                     Chọn file đề thi (.json)
                 </h3>
                 <p className="text-lg text-slate-400 font-medium">
-                    Kéo thả hoặc nhấp để tải lên
+                    Kéo thả hoặc chạm để tải lên
                 </p>
+            </div>
+            
+            {/* Visual Button for Mobile Affordance */}
+            <div className="mt-2 md:hidden">
+                <span className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200">
+                    Duyệt file
+                </span>
             </div>
           </div>
         </div>
