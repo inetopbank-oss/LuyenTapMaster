@@ -1,13 +1,14 @@
 import React, { useCallback, useState, useRef } from 'react';
-import { Upload, FileJson, AlertCircle, Sparkles, BookOpen, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { Upload, FileJson, AlertCircle, Sparkles, BookOpen, Link as LinkIcon, Loader2, HelpCircle } from 'lucide-react';
 import { normalizeQuestions } from '../utils';
 import { Question } from '../types';
 
 interface FileUploadProps {
   onDataLoaded: (questions: Question[]) => void;
+  onGuide: () => void;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onGuide }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState('');
@@ -121,7 +122,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-50 font-sans selection:bg-indigo-100">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-50 font-sans selection:bg-indigo-100 relative">
+      
+      {/* Top Right Help Button */}
+      <button 
+          onClick={onGuide}
+          className="absolute top-6 right-6 flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-bold text-sm bg-white p-2 px-4 rounded-full shadow-sm border border-slate-200 transition-all hover:border-indigo-200"
+      >
+          <HelpCircle size={18} /> Hướng dẫn
+      </button>
+
       <div className="max-w-3xl w-full text-center space-y-8 animate-fade-in">
         
         {/* Hero Section */}

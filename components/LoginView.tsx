@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { User, School, Sparkles, ArrowRight } from 'lucide-react';
+import { User, School, Sparkles, ArrowRight, BookOpen } from 'lucide-react';
 import { UserInfo } from '../types';
 
 interface LoginViewProps {
   onLogin: (info: UserInfo) => void;
+  onGuide: () => void;
 }
 
-const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
+const LoginView: React.FC<LoginViewProps> = ({ onLogin, onGuide }) => {
   const [name, setName] = useState('');
   const [className, setClassName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -87,19 +88,29 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     </div>
                 )}
 
-                <button
-                    type="submit"
-                    className="w-full py-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 group"
-                >
-                    <span>Tiếp tục</span>
-                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                </button>
+                <div className="flex flex-col gap-3">
+                    <button
+                        type="submit"
+                        className="w-full py-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 group"
+                    >
+                        <span>Tiếp tục</span>
+                        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    
+                    <button
+                        type="button"
+                        onClick={onGuide}
+                        className="w-full py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                        <BookOpen size={18} /> Hướng dẫn sử dụng
+                    </button>
+                </div>
             </form>
         </div>
         
         <div className="mt-8 text-center">
             <p className="text-slate-300 text-xs font-bold tracking-widest uppercase opacity-80">
-                Phiên bản v1.2.0
+                Phiên bản v1.3.1
             </p>
         </div>
 

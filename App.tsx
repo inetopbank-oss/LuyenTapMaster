@@ -7,6 +7,7 @@ import ExamRunner from './components/ExamRunner';
 import ResultView from './components/ResultView';
 import LoginView from './components/LoginView';
 import AdminDashboard from './components/AdminDashboard';
+import StudentGuide from './components/StudentGuide';
 
 const HISTORY_KEY = 'mathpro_exam_history';
 
@@ -208,6 +209,18 @@ const App: React.FC = () => {
       }));
   };
 
+  const handleShowGuide = () => {
+      setAppState(prev => ({ ...prev, status: 'GUIDE' }));
+  };
+
+  const handleBackFromGuide = () => {
+      // If user is logged in, go to UPLOAD, else go to LOGIN
+      setAppState(prev => ({
+          ...prev,
+          status: prev.userInfo ? 'UPLOAD' : 'LOGIN'
+      }));
+  };
+
   // Determine time spent in seconds
   const timeSpentSeconds = appState.startTime && appState.endTime 
     ? Math.floor((appState.endTime - appState.startTime) / 1000)
@@ -216,11 +229,11 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen font-sans">
       {appState.status === 'LOGIN' && (
-          <LoginView onLogin={handleLogin} />
+          <LoginView onLogin={handleLogin} onGuide={handleShowGuide} />
       )}
 
       {appState.status === 'UPLOAD' && (
-        <FileUpload onDataLoaded={handleDataLoaded} />
+        <FileUpload onDataLoaded={handleDataLoaded} onGuide={handleShowGuide} />
       )}
       
       {appState.status === 'ADMIN_DASHBOARD' && (
@@ -258,6 +271,10 @@ const App: React.FC = () => {
             onConfig={handleReconfig}
             onHome={handleHome} 
         />
+      )}
+
+      {appState.status === 'GUIDE' && (
+          <StudentGuide onBack={handleBackFromGuide} />
       )}
     </div>
   );

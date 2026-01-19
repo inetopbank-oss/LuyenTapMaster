@@ -36,7 +36,7 @@ export interface ExamConfig {
 }
 
 export interface ExamState {
-  status: 'LOGIN' | 'UPLOAD' | 'CONFIG' | 'RUNNING' | 'RESULT' | 'ADMIN_DASHBOARD';
+  status: 'LOGIN' | 'UPLOAD' | 'CONFIG' | 'RUNNING' | 'RESULT' | 'ADMIN_DASHBOARD' | 'GUIDE';
   userInfo: UserInfo | null;
   originalQuestions: Question[];
   activeQuestions: Question[];
