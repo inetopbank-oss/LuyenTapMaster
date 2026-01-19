@@ -32,8 +32,13 @@ export function normalizeQuestions(input: any): Question[] {
   // Handle both array input (legacy) and object input (new format with metadata)
   if (Array.isArray(input)) {
     data = input;
-  } else if (input && typeof input === 'object' && Array.isArray(input.questions)) {
-    data = input.questions;
+  } else if (input && typeof input === 'object') {
+     if (Array.isArray(input.questions)) {
+         data = input.questions;
+     } else if (input.content && input.options) {
+         // Handle single question object input
+         data = [input];
+     }
   }
 
   return data.map((q, index) => {
@@ -96,7 +101,18 @@ export function normalizeQuestions(input: any): Question[] {
     }
 
     // 3. Explanation normalization
-    const explanation = q.explanation || q.solution || q.loigiai || q.loi_giai || q.guide || q.huongdan || '';
+    let explanation = '';
+    if (q.explanation) {
+        if (typeof q.explanation === 'object') {
+             // Support for structured explanation { short: string, full: string }
+             explanation = q.explanation.full || q.explanation.short || '';
+        } else {
+             explanation = String(q.explanation);
+        }
+    } else {
+        // Legacy fallback keys
+        explanation = q.solution || q.loigiai || q.loi_giai || q.guide || q.huongdan || '';
+    }
 
     // 4. Lesson/Chapter normalization
     const lesson = q.lesson || q.chapter || q.bai || q.chuong || '';
