@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle, XCircle, RotateCcw, Home, Clock, Award, HelpCircle, ChevronDown, Target, Filter, AlertCircle, BookOpen, FileText, PieChart, User, School, History, Calendar, Settings } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Home, Clock, Award, HelpCircle, ChevronDown, Target, Filter, AlertCircle, BookOpen, FileText, PieChart, User, School, History, Calendar, Settings } from 'lucide-react';
 import { Question, UserInfo, ExamResultLog } from '../types';
 import { formatTime } from '../utils';
 import MathText from './MathText';
@@ -10,7 +10,7 @@ interface ResultViewProps {
   timeSpent: number;
   userInfo: UserInfo | null;
   history: ExamResultLog[];
-  onRetry: () => void;
+  onRecreate: () => void;
   onConfig: () => void;
   onHome: () => void;
 }
@@ -62,7 +62,7 @@ const ScoreCircle = ({ score, max, size = 120 }: { score: number; max: number; s
     )
 }
 
-const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpent, userInfo, history, onRetry, onConfig, onHome }) => {
+const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpent, userInfo, history, onRecreate, onConfig, onHome }) => {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'REVIEW' | 'HISTORY'>('OVERVIEW');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<'ALL' | 'INCORRECT'>('ALL');
@@ -544,10 +544,10 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
         </button>
         <div className="w-px h-8 bg-slate-200"></div>
         <button 
-            onClick={onRetry}
+            onClick={onRecreate}
             className="flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
         >
-            <RotateCcw size={20} /> <span className="hidden sm:inline">Làm lại bài</span><span className="sm:hidden">Làm lại</span>
+            <RefreshCw size={20} /> <span className="hidden sm:inline">Tạo đề mới</span><span className="sm:hidden">Đề mới</span>
         </button>
       </div>
 

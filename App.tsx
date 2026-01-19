@@ -174,7 +174,7 @@ const App: React.FC = () => {
       }));
   };
 
-  const handleRetry = () => {
+  const handleRecreateExam = () => {
       // Restart with same config but reshuffle
       handleStartExam(appState.config);
   };
@@ -267,7 +267,7 @@ const App: React.FC = () => {
             timeSpent={timeSpentSeconds}
             userInfo={appState.userInfo}
             history={history}
-            onRetry={handleRetry}
+            onRecreate={handleRecreateExam}
             onConfig={handleReconfig}
             onHome={handleHome} 
         />
