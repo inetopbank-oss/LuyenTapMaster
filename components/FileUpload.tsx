@@ -25,7 +25,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
         onDataLoaded(questions);
       } catch (err: any) {
         if (content.trim().toLowerCase().startsWith('<!doctype html') || content.trim().toLowerCase().startsWith('<html')) {
-             setError('Link trả về trang HTML thay vì JSON. Vui lòng đảm bảo Link Google Drive ở chế độ "Bất kỳ ai có đường liên kết" (Public) hoặc sử dụng link tải trực tiếp.');
+             setError('Link trả về trang HTML thay vì JSON. Vui lòng đảm bảo Link Google Drive ở chế độ "Bất kỳ ai có đường liên kết" (Public).');
         } else {
              setError(`Lỗi đọc dữ liệu: ${err.message}`);
         }
@@ -60,16 +60,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
 
       let fetchUrl = url.trim();
       
-      // Auto-convert Google Drive View Links to Download Links
-      // Regex matches /file/d/ID/ or id=ID
+      // Logic xử lý link Google Drive: Chuyển từ View Link sang Direct Download Link
+      // Regex bắt ID: /d/ID/ hoặc id=ID
       const gDriveIdRegex = /\/d\/([-_\w]+)|\?id=([-_\w]+)/;
       const match = fetchUrl.match(gDriveIdRegex);
       const id = match ? (match[1] || match[2]) : null;
 
       if (id && fetchUrl.includes('google.com')) {
-          // Construct direct download URL
-          // Note: This relies on Google Drive allowing CORS for this specific endpoint or the browser handling the redirect transparently.
-          // Often this fails in strict CORS environments without a proxy, but we attempt it.
+          // Tạo link tải trực tiếp
           fetchUrl = `https://drive.google.com/uc?export=download&id=${id}`;
       }
 
@@ -83,7 +81,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
       } catch (err: any) {
           let msg = err.message;
           if (msg.includes('Failed to fetch')) {
-              msg = 'Lỗi CORS hoặc Mạng. Google Drive có thể chặn tải trực tiếp từ trình duyệt. Hãy thử tải file về máy rồi upload lên đây.';
+              msg = 'Lỗi kết nối (CORS). Google Drive chặn tải trực tiếp từ trình duyệt. Hãy thử tải file về máy rồi upload lên đây.';
           }
           setError(`Không thể tải từ Link: ${msg}`);
       } finally {
@@ -206,7 +204,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleUrlImport()}
-                        placeholder="Link Google Drive / JSON..." 
+                        placeholder="Dán Link Google Drive hoặc JSON..." 
                         className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all shadow-sm placeholder-slate-400 text-slate-700"
                     />
                 </div>

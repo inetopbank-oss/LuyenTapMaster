@@ -23,8 +23,8 @@ const App: React.FC = () => {
         mode: 'CUSTOM',
         difficulty: 'ALL',
         questionTypes: ['MCQ', 'Essay', 'TF', 'SA'], // Default all types
-        limit: 20,
-        durationMinutes: 30
+        limit: 15,
+        durationMinutes: 15
     }
   });
 
@@ -178,6 +178,18 @@ const App: React.FC = () => {
       handleStartExam(appState.config);
   };
 
+  const handleReconfig = () => {
+      // Go back to CONFIG state, keeping the original questions
+      setAppState(prev => ({
+          ...prev,
+          status: 'CONFIG',
+          activeQuestions: [],
+          userAnswers: {},
+          startTime: null,
+          endTime: null
+      }));
+  };
+
   const handleHome = () => {
       setAppState(prev => ({
           ...prev,
@@ -243,6 +255,7 @@ const App: React.FC = () => {
             userInfo={appState.userInfo}
             history={history}
             onRetry={handleRetry}
+            onConfig={handleReconfig}
             onHome={handleHome} 
         />
       )}

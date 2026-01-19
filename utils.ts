@@ -36,7 +36,7 @@ export function normalizeQuestions(input: any): Question[] {
      if (Array.isArray(input.questions)) {
          data = input.questions;
      } else if (input.content && input.options) {
-         // Handle single question object input
+         // Handle single question object input directly
          data = [input];
      }
   }
@@ -57,23 +57,24 @@ export function normalizeQuestions(input: any): Question[] {
 
             options = q.options.map((opt: any, idx: number) => {
                 // Check if this option ID matches the correctOptionId
-                // Use loose comparison to match string "1" with number 1 if needed
-                if (correctId !== undefined && opt.id == correctId) {
+                if (correctId !== undefined && (opt.id == correctId || opt.id === q.correctAnswer)) {
                     foundIndex = idx;
                 }
                 // Convert content to standardized "A. Content" format
                 const label = String.fromCharCode(65 + idx); // A, B, C...
-                // Handle cases where content might already start with "A." (though rare in object format)
-                return `${label}. ${opt.content}`;
+                return `${label}. ${opt.content || ''}`;
             });
 
             // Set correct answer based on the index of the matching ID
             if (foundIndex !== -1) {
                 correctAnswer = String.fromCharCode(65 + foundIndex);
             } else {
-                // Fallback: Check if correctAnswer field exists directly
-                if (q.correctAnswer) correctAnswer = String(q.correctAnswer);
-                else if (q.correctOptionId) correctAnswer = String(q.correctOptionId);
+                // Fallback: Check if correctAnswer field exists directly and matches A, B, C, D
+                if (q.correctOptionId && ['A','B','C','D'].includes(String(q.correctOptionId))) {
+                    correctAnswer = String(q.correctOptionId);
+                } else if (q.correctAnswer) {
+                    correctAnswer = String(q.correctAnswer);
+                }
             }
         } 
         // Case B: Options are simple strings

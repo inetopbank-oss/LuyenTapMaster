@@ -9,7 +9,7 @@ interface ExamConfigViewProps {
 }
 
 const EXAM_PRESETS = [
-    { time: 15, questions: 10, label: '15 Phút' },
+    { time: 15, questions: 15, label: '15 Phút' },
     { time: 30, questions: 20, label: '30 Phút' },
     { time: 45, questions: 30, label: '45 Phút' },
     { time: 60, questions: 40, label: '60 Phút' },
@@ -24,8 +24,8 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
     mode: 'STANDARD',
     difficulty: 'ALL',
     questionTypes: allQuestionTypes,
-    limit: 30,
-    durationMinutes: 45, 
+    limit: 15,
+    durationMinutes: 15, 
   });
   
   const [maxPossible, setMaxPossible] = useState(0);
@@ -65,7 +65,7 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
         if (config.limit > filtered.length && filtered.length > 0) {
             setConfig(prev => ({ ...prev, limit: filtered.length }));
         } else if (filtered.length > 0 && config.limit === 0) {
-            setConfig(prev => ({ ...prev, limit: Math.min(20, filtered.length) }));
+            setConfig(prev => ({ ...prev, limit: Math.min(15, filtered.length) }));
         }
     } else {
         // Calculate max possible based on the strictest bottleneck in the matrix

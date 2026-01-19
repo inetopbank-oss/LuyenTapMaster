@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle, XCircle, RotateCcw, Home, Clock, Award, HelpCircle, ChevronDown, Target, Filter, AlertCircle, BookOpen, FileText, PieChart, User, School, History, Calendar } from 'lucide-react';
+import { CheckCircle, XCircle, RotateCcw, Home, Clock, Award, HelpCircle, ChevronDown, Target, Filter, AlertCircle, BookOpen, FileText, PieChart, User, School, History, Calendar, Settings } from 'lucide-react';
 import { Question, UserInfo, ExamResultLog } from '../types';
 import { formatTime } from '../utils';
 import MathText from './MathText';
@@ -11,6 +11,7 @@ interface ResultViewProps {
   userInfo: UserInfo | null;
   history: ExamResultLog[];
   onRetry: () => void;
+  onConfig: () => void;
   onHome: () => void;
 }
 
@@ -61,7 +62,7 @@ const ScoreCircle = ({ score, max, size = 120 }: { score: number; max: number; s
     )
 }
 
-const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpent, userInfo, history, onRetry, onHome }) => {
+const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpent, userInfo, history, onRetry, onConfig, onHome }) => {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'REVIEW' | 'HISTORY'>('OVERVIEW');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<'ALL' | 'INCORRECT'>('ALL');
@@ -136,17 +137,6 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
              <div className="flex flex-col lg:flex-row items-end justify-between mb-4 gap-4">
                 <div className="flex flex-col text-center lg:text-left w-full lg:w-auto">
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Kết quả bài làm</h1>
-                    {/* Header Info Badge (kept for navigation context) */}
-                    {userInfo && (
-                        <div className="inline-flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-6 px-2 py-1 lg:hidden">
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                                <User size={16} /> <span>{userInfo.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                                <School size={16} /> <span>{userInfo.class}</span>
-                            </div>
-                        </div>
-                    )}
                 </div>
                 
                 {/* Tab Switcher */}
@@ -178,80 +168,79 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
       {activeTab === 'OVERVIEW' && (
       <div className="animate-fade-in">
         {/* Dashboard Cards */}
-        <div className="bg-white border-b border-slate-200 py-8 px-4 mb-8">
+        <div className="bg-white border-b border-slate-200 py-6 px-4 mb-8">
             <div className="max-w-6xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Score Card */}
-                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center relative overflow-hidden min-h-[400px]">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {/* Score Card - Compact with User Info */}
+                    <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center relative overflow-hidden min-h-[300px]">
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
                         
-                        {/* Student Info - Prominent Display */}
+                        {/* Compact Student Info */}
                         {userInfo && (
-                            <div className="flex flex-col items-center mb-8 w-full pb-6 border-b border-slate-50">
-                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3 shadow-inner ring-4 ring-white">
-                                    <User size={32} />
-                                </div>
-                                <h2 className="text-2xl font-black text-slate-800 mb-1.5 text-center leading-tight">{userInfo.name}</h2>
-                                <div className="flex items-center gap-1.5 text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                                    <School size={14} />
-                                    <span>Lớp: {userInfo.class}</span>
+                            <div className="mb-5 text-center w-full border-b border-slate-100 pb-3">
+                                <h2 className="text-lg font-black text-slate-800 leading-tight">{userInfo.name}</h2>
+                                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full mt-1.5">
+                                    <School size={12} />
+                                    <span>{userInfo.class}</span>
                                 </div>
                             </div>
                         )}
 
-                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Điểm số</h3>
-                        <ScoreCircle score={displayScore} max={10} size={140} />
-                        <div className="mt-6 text-center">
-                            <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-bold ${
-                                percentage >= 80 ? 'bg-emerald-100 text-emerald-700' :
-                                percentage >= 50 ? 'bg-amber-100 text-amber-700' :
-                                'bg-rose-100 text-rose-700'
-                            }`}>
-                                {percentage >= 80 ? 'Xuất sắc' : percentage >= 50 ? 'Đạt' : 'Cần cố gắng'}
-                            </span>
+                        <div className="flex flex-col items-center">
+                            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Điểm số</h3>
+                            <ScoreCircle score={displayScore} max={10} size={120} />
+                            <div className="mt-4 text-center">
+                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
+                                    percentage >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                                    percentage >= 50 ? 'bg-amber-100 text-amber-700' :
+                                    'bg-rose-100 text-rose-700'
+                                }`}>
+                                    {percentage >= 80 ? 'Xuất sắc' : percentage >= 50 ? 'Đạt' : 'Cần cố gắng'}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Stats Grid */}
-                    <div className="md:col-span-2 grid grid-cols-2 gap-4 md:gap-6">
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center items-start pl-8 relative group hover:border-emerald-200 transition-colors">
-                            <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 mb-3 group-hover:scale-110 transition-transform">
-                                <CheckCircle size={24} strokeWidth={2.5} />
+                    {/* Stats Grid - Compact */}
+                    <div className="md:col-span-2 grid grid-cols-2 gap-3 md:gap-4">
+                        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col justify-center items-start pl-6 relative group hover:border-emerald-200 transition-colors">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 mb-2 group-hover:scale-110 transition-transform">
+                                <CheckCircle size={20} strokeWidth={2.5} />
                             </div>
-                            <div className="text-4xl font-black text-slate-800 mb-1">
-                                {correctCount}<span className="text-lg text-slate-400 font-medium">/{questions.length}</span>
+                            <div className="text-3xl font-black text-slate-800 mb-0.5">
+                                {correctCount}<span className="text-sm text-slate-400 font-medium">/{questions.length}</span>
                             </div>
-                            <div className="text-sm font-bold text-slate-400 uppercase">Số câu đúng</div>
+                            <div className="text-xs font-bold text-slate-400 uppercase">Số câu đúng</div>
                         </div>
 
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center items-start pl-8 relative group hover:border-blue-200 transition-colors">
-                            <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 mb-3 group-hover:scale-110 transition-transform">
-                                <Clock size={24} strokeWidth={2.5} />
+                        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col justify-center items-start pl-6 relative group hover:border-blue-200 transition-colors">
+                            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 mb-2 group-hover:scale-110 transition-transform">
+                                <Clock size={20} strokeWidth={2.5} />
                             </div>
-                            <div className="text-4xl font-black text-slate-800 mb-1 tabular-nums">
+                            <div className="text-3xl font-black text-slate-800 mb-0.5 tabular-nums">
                                 {formatTime(timeSpent)}
                             </div>
-                            <div className="text-sm font-bold text-slate-400 uppercase">Thời gian làm bài</div>
+                            <div className="text-xs font-bold text-slate-400 uppercase">Thời gian</div>
                         </div>
 
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center items-start pl-8 relative group hover:border-indigo-200 transition-colors">
-                            <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 mb-3 group-hover:scale-110 transition-transform">
-                                <Target size={24} strokeWidth={2.5} />
+                        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col justify-center items-start pl-6 relative group hover:border-indigo-200 transition-colors">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 mb-2 group-hover:scale-110 transition-transform">
+                                <Target size={20} strokeWidth={2.5} />
                             </div>
-                            <div className="text-4xl font-black text-slate-800 mb-1">
+                            <div className="text-3xl font-black text-slate-800 mb-0.5">
                                 {Math.round((Object.keys(userAnswers).length / questions.length) * 100)}%
                             </div>
-                            <div className="text-sm font-bold text-slate-400 uppercase">Tỷ lệ hoàn thành</div>
+                            <div className="text-xs font-bold text-slate-400 uppercase">Hoàn thành</div>
                         </div>
 
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center items-start pl-8 relative group hover:border-purple-200 transition-colors">
-                            <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 mb-3 group-hover:scale-110 transition-transform">
-                                <Award size={24} strokeWidth={2.5} />
+                        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col justify-center items-start pl-6 relative group hover:border-purple-200 transition-colors">
+                            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 mb-2 group-hover:scale-110 transition-transform">
+                                <Award size={20} strokeWidth={2.5} />
                             </div>
-                            <div className="text-xl font-bold text-slate-800 mb-1 leading-tight">
+                            <div className="text-lg font-bold text-slate-800 mb-0.5 leading-tight">
                                 {percentage >= 90 ? 'Tuyệt vời!' : percentage >= 70 ? 'Khá tốt!' : percentage >= 50 ? 'Trung bình' : 'Cố lên nhé!'}
                             </div>
-                            <div className="text-sm font-bold text-slate-400 uppercase">Đánh giá chung</div>
+                            <div className="text-xs font-bold text-slate-400 uppercase">Đánh giá</div>
                         </div>
                     </div>
                 </div>
@@ -540,17 +529,23 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
       )}
 
       {/* Floating Footer */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-3 bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-2xl border border-slate-200 z-50 ring-1 ring-slate-900/5">
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-2 sm:gap-3 bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-2xl border border-slate-200 z-50 ring-1 ring-slate-900/5">
         <button 
             onClick={onHome}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+            className="flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors"
         >
             <Home size={20} /> <span className="hidden sm:inline">Trang chủ</span>
+        </button>
+        <button 
+            onClick={onConfig}
+            className="flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+        >
+            <Settings size={20} /> <span className="hidden sm:inline">Thiết lập</span>
         </button>
         <div className="w-px h-8 bg-slate-200"></div>
         <button 
             onClick={onRetry}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
+            className="flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
         >
             <RotateCcw size={20} /> <span className="hidden sm:inline">Làm lại bài</span><span className="sm:hidden">Làm lại</span>
         </button>

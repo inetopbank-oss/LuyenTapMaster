@@ -21,8 +21,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
   
   // --- STATE FOR GENERATOR ---
   const [examTitle, setExamTitle] = useState('Đề kiểm tra Toán 12');
-  const [duration, setDuration] = useState(45);
-  const [totalQuestions, setTotalQuestions] = useState(20);
+  const [duration, setDuration] = useState(15);
+  const [totalQuestions, setTotalQuestions] = useState(15);
   const [matrix, setMatrix] = useState<MatrixConfig>({ NB: 8, TH: 6, VD: 4, VDC: 2 });
   const [genError, setGenError] = useState<string | null>(null);
 
@@ -85,10 +85,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
       setDuration(mins);
       // Auto adjust question count recommendation based on duration
       let recommendedQ = 20;
-      if (mins === 15) recommendedQ = 10;
+      if (mins === 15) recommendedQ = 15;
       else if (mins === 30) recommendedQ = 20;
-      else if (mins === 45) recommendedQ = 25;
-      else if (mins === 60) recommendedQ = 30;
+      else if (mins === 45) recommendedQ = 30;
+      else if (mins === 60) recommendedQ = 40;
       else if (mins === 90) recommendedQ = 50;
       
       setTotalQuestions(recommendedQ);
