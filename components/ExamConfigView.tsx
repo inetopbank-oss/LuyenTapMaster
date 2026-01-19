@@ -29,7 +29,7 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
   });
   
   const [maxPossible, setMaxPossible] = useState(0);
-  const [matrixCounts, setMatrixCounts] = useState({ nb: 0, th: 0, vd: 0 });
+  const [matrixCounts, setMatrixCounts] = useState({ nb: 0, th: 0, vd: 0, vdc: 0 });
 
   const detailedStats = React.useMemo(() => {
     return {
@@ -41,12 +41,14 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
     };
   }, [totalQuestions]);
 
-  const stats = React.useMemo(() => {
-    const nb = detailedStats.NB;
-    const th = detailedStats.TH;
-    const vd = detailedStats.VD + detailedStats.VDC;
-    return { nb, th, vd };
-  }, [detailedStats]);
+  // Helper for matrix ratios based on duration
+  const getRatios = (minutes: number) => {
+      if (minutes <= 15) return { NB: 0.60, TH: 0.40, VD: 0.00, VDC: 0.00 };
+      if (minutes <= 30) return { NB: 0.50, TH: 0.35, VD: 0.15, VDC: 0.00 };
+      if (minutes <= 45) return { NB: 0.40, TH: 0.35, VD: 0.20, VDC: 0.05 };
+      if (minutes <= 60) return { NB: 0.35, TH: 0.35, VD: 0.25, VDC: 0.05 };
+      return { NB: 0.30, TH: 0.35, VD: 0.30, VDC: 0.05 };
+  };
 
   useEffect(() => {
     setConfig(prev => ({ ...prev, mode }));
@@ -66,24 +68,41 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
             setConfig(prev => ({ ...prev, limit: Math.min(20, filtered.length) }));
         }
     } else {
-        const maxNB = Math.floor(stats.nb / 0.5);
-        const maxTH = Math.floor(stats.th / 0.3);
-        const maxVD = Math.floor(stats.vd / 0.2);
-        const calculatedMax = Math.min(maxNB, maxTH, maxVD);
-        setMaxPossible(calculatedMax);
+        // Calculate max possible based on the strictest bottleneck in the matrix
+        const r = getRatios(config.durationMinutes);
+        
+        const maxNB = r.NB > 0 ? Math.floor(detailedStats.NB / r.NB) : Infinity;
+        const maxTH = r.TH > 0 ? Math.floor(detailedStats.TH / r.TH) : Infinity;
+        const maxVD = r.VD > 0 ? Math.floor(detailedStats.VD / r.VD) : Infinity;
+        const maxVDC = r.VDC > 0 ? Math.floor(detailedStats.VDC / r.VDC) : Infinity;
+        
+        let possible = Infinity;
+        if (r.NB > 0) possible = Math.min(possible, maxNB);
+        if (r.TH > 0) possible = Math.min(possible, maxTH);
+        if (r.VD > 0) possible = Math.min(possible, maxVD);
+        if (r.VDC > 0) possible = Math.min(possible, maxVDC);
+        
+        setMaxPossible(possible === Infinity ? 0 : possible);
     }
-  }, [config.difficulty, config.questionTypes, totalQuestions, mode, stats]);
+  }, [config.difficulty, config.questionTypes, totalQuestions, mode, detailedStats, config.durationMinutes]);
 
   useEffect(() => {
       if (mode === 'STANDARD') {
           const actualLimit = Math.min(config.limit, maxPossible);
+          const r = getRatios(config.durationMinutes);
+          
+          const nb = Math.round(actualLimit * r.NB);
+          const th = Math.round(actualLimit * r.TH);
+          const vd = Math.round(actualLimit * r.VD);
+          // Assign remainder to VDC if VDC ratio > 0, otherwise to VD or TH to ensure sum matches limit
+          // Using strict logic:
+          const vdc = actualLimit - nb - th - vd;
+
           setMatrixCounts({
-              nb: Math.round(actualLimit * 0.5),
-              th: Math.round(actualLimit * 0.3),
-              vd: actualLimit - Math.round(actualLimit * 0.5) - Math.round(actualLimit * 0.3)
+              nb, th, vd, vdc: Math.max(0, vdc)
           });
       }
-  }, [config.limit, mode, maxPossible]);
+  }, [config.limit, mode, maxPossible, config.durationMinutes]);
 
   const handlePresetSelect = (preset: typeof EXAM_PRESETS[0]) => {
       setConfig(prev => ({
@@ -235,16 +254,17 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
                                      <AlertTriangle className="shrink-0 text-orange-500 mt-0.5" size={16} />
                                      <div>
                                          <span className="font-bold block text-xs uppercase mb-0.5">Không đủ câu hỏi</span>
-                                         <span className="text-xs">Chỉ đủ <strong>{maxPossible}</strong> câu chuẩn (5:3:2). Hệ thống sẽ tự động giảm.</span>
+                                         <span className="text-xs">Chỉ đủ <strong>{maxPossible}</strong> câu cho thời lượng {config.durationMinutes}p. Hệ thống sẽ tự động giảm.</span>
                                      </div>
                                 </div>
                             ) : (
                                 <div className="p-3 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex flex-col gap-2">
-                                    <span className="font-bold text-xs uppercase flex items-center gap-1.5"><PieChart size={14} /> Phân bổ ma trận:</span>
+                                    <span className="font-bold text-xs uppercase flex items-center gap-1.5"><PieChart size={14} /> Phân bổ ma trận ({config.durationMinutes}p):</span>
                                     <div className="flex gap-2 text-[10px] md:text-xs font-bold">
                                         <span className="bg-green-100 text-green-700 px-2 py-1 rounded flex-1 text-center border border-green-200">{matrixCounts.nb} NB</span>
                                         <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded flex-1 text-center border border-blue-200">{matrixCounts.th} TH</span>
-                                        <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded flex-1 text-center border border-orange-200">{matrixCounts.vd} VD+</span>
+                                        {matrixCounts.vd > 0 && <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded flex-1 text-center border border-orange-200">{matrixCounts.vd} VD</span>}
+                                        {matrixCounts.vdc > 0 && <span className="bg-red-100 text-red-700 px-2 py-1 rounded flex-1 text-center border border-red-200">{matrixCounts.vdc} VDC</span>}
                                     </div>
                                 </div>
                             )}
@@ -354,7 +374,7 @@ const ExamConfigView: React.FC<ExamConfigViewProps> = ({ totalQuestions, onStart
                      </button>
                      {maxPossible === 0 && (
                          <p className="text-red-500 text-center mt-2 text-[10px] font-bold">
-                             * Không tìm thấy câu hỏi phù hợp.
+                             * Không tìm thấy câu hỏi phù hợp với ma trận.
                          </p>
                      )}
                  </div>

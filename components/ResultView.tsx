@@ -132,38 +132,42 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
       
       {/* Sticky Header with Tabs */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 pt-4">
-             <div className="flex flex-col lg:flex-row items-center justify-between mb-4 gap-4">
-                <div className="flex flex-col text-center lg:text-left">
-                    <h1 className="text-2xl font-black text-slate-800 tracking-tight">Kết quả bài làm</h1>
+        <div className="max-w-5xl mx-auto px-4 pt-6 pb-2">
+             <div className="flex flex-col lg:flex-row items-end justify-between mb-4 gap-4">
+                <div className="flex flex-col text-center lg:text-left w-full lg:w-auto">
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Kết quả bài làm</h1>
+                    {/* Header Info Badge (kept for navigation context) */}
                     {userInfo && (
-                        <div className="flex items-center justify-center lg:justify-start gap-4 text-xs font-medium text-slate-500 mt-1">
-                            <span className="flex items-center gap-1"><User size={12}/> {userInfo.name}</span>
-                            <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                            <span className="flex items-center gap-1"><School size={12}/> {userInfo.class}</span>
+                        <div className="inline-flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-6 px-2 py-1 lg:hidden">
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <User size={16} /> <span>{userInfo.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <School size={16} /> <span>{userInfo.class}</span>
+                            </div>
                         </div>
                     )}
                 </div>
                 
                 {/* Tab Switcher */}
-                <div className="bg-slate-100 p-1 rounded-xl flex items-center font-bold text-sm shrink-0 overflow-x-auto max-w-full">
+                <div className="bg-slate-100 p-1.5 rounded-xl flex items-center font-bold text-sm shrink-0 overflow-x-auto max-w-full w-full lg:w-auto">
                     <button 
                         onClick={() => setActiveTab('OVERVIEW')}
-                        className={`px-3 py-2 sm:px-4 rounded-lg flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'OVERVIEW' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`flex-1 lg:flex-none px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'OVERVIEW' ? 'bg-white text-indigo-700 shadow-md ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                     >
-                        <PieChart size={16} /> <span className="hidden sm:inline">Tổng quan</span>
+                        <PieChart size={18} /> <span className="hidden sm:inline">Tổng quan</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('REVIEW')}
-                        className={`px-3 py-2 sm:px-4 rounded-lg flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'REVIEW' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`flex-1 lg:flex-none px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'REVIEW' ? 'bg-white text-indigo-700 shadow-md ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                     >
-                        <FileText size={16} /> <span className="hidden sm:inline">Xem lại đề</span>
+                        <FileText size={18} /> <span className="hidden sm:inline">Xem lại đề</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('HISTORY')}
-                        className={`px-3 py-2 sm:px-4 rounded-lg flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'HISTORY' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`flex-1 lg:flex-none px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'HISTORY' ? 'bg-white text-indigo-700 shadow-md ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                     >
-                        <History size={16} /> <span className="hidden sm:inline">Lịch sử</span>
+                        <History size={18} /> <span className="hidden sm:inline">Lịch sử</span>
                     </button>
                 </div>
              </div>
@@ -178,11 +182,26 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
             <div className="max-w-6xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Score Card */}
-                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center relative overflow-hidden">
+                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center relative overflow-hidden min-h-[400px]">
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                        
+                        {/* Student Info - Prominent Display */}
+                        {userInfo && (
+                            <div className="flex flex-col items-center mb-8 w-full pb-6 border-b border-slate-50">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3 shadow-inner ring-4 ring-white">
+                                    <User size={32} />
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-800 mb-1.5 text-center leading-tight">{userInfo.name}</h2>
+                                <div className="flex items-center gap-1.5 text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                                    <School size={14} />
+                                    <span>Lớp: {userInfo.class}</span>
+                                </div>
+                            </div>
+                        )}
+
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Điểm số</h3>
                         <ScoreCircle score={displayScore} max={10} size={140} />
-                        <div className="mt-4 text-center">
+                        <div className="mt-6 text-center">
                             <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-bold ${
                                 percentage >= 80 ? 'bg-emerald-100 text-emerald-700' :
                                 percentage >= 50 ? 'bg-amber-100 text-amber-700' :
@@ -300,7 +319,9 @@ const ResultView: React.FC<ResultViewProps> = ({ questions, userAnswers, timeSpe
                                                 <span className="text-xs font-black uppercase tracking-wider text-slate-500">Câu {originalIndex}</span>
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${q.difficulty === 'NB' ? 'bg-green-50 text-green-700 border-green-200' : q.difficulty === 'TH' ? 'bg-blue-50 text-blue-700 border-blue-200' : q.difficulty === 'VD' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{q.difficulty}</span>
                                             </div>
-                                            <div className={`text-slate-800 font-medium truncate pr-4 ${isExpanded ? 'opacity-0 h-0' : 'opacity-100'}`}>{q.content.replace(/<[^>]+>/g, '')}</div>
+                                            <div className={`text-slate-800 font-medium truncate pr-4 ${isExpanded ? 'opacity-0 h-0' : 'opacity-100'}`}>
+                                                <MathText content={q.content.replace(/<[^>]+>/g, ' ')} />
+                                            </div>
                                         </div>
                                         <div className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}><ChevronDown size={24} /></div>
                                     </div>

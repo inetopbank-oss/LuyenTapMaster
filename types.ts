@@ -9,6 +9,7 @@ export interface Question {
   options?: string[]; // Mostly for MCQ
   correctAnswer?: string;
   explanation?: string;
+  lesson?: string; // New field for Textbook Lesson
 }
 
 export interface UserInfo {

@@ -43,8 +43,10 @@ const App: React.FC = () => {
   }, []);
 
   const handleLogin = (info: UserInfo) => {
-      // Check for Admin Credentials
-      const isAdmin = info.name === 'admin' && info.class === 'admin';
+      // Check for Admin/Teacher Credentials
+      // Accepts: name="admin"/class="admin" OR name="GV"/class="GV"
+      const isAdmin = (info.name === 'admin' && info.class === 'admin') || 
+                      (info.name === 'GV' && info.class === 'GV');
       
       setAppState(prev => ({
           ...prev,
@@ -71,16 +73,32 @@ const App: React.FC = () => {
     let finalQuestions: Question[] = [];
 
     if (config.mode === 'STANDARD') {
-        // STANDARD MODE: 50% NB, 30% TH, 20% VD/VDC
-        const nbCount = Math.round(config.limit * 0.5);
-        const thCount = Math.round(config.limit * 0.3);
-        const vdCount = config.limit - nbCount - thCount; // Remainder
+        // STANDARD MODE: Dynamic Matrix based on Duration
+        // 15 min: NB 60% - TH 40% - VD 0% - VDC 0%
+        // 30 min: NB 50% - TH 35% - VD 15% - VDC 0%
+        // 45 min: NB 40% - TH 35% - VD 20% - VDC 5%
+        // 60 min: NB 35% - TH 35% - VD 25% - VDC 5%
+        // 90 min: NB 30% - TH 35% - VD 30% - VDC 5%
+        
+        let ratios = { NB: 0.30, TH: 0.35, VD: 0.30, VDC: 0.05 }; // Default (>= 90)
+        const m = config.durationMinutes;
+
+        if (m <= 15) ratios = { NB: 0.60, TH: 0.40, VD: 0.00, VDC: 0.00 };
+        else if (m <= 30) ratios = { NB: 0.50, TH: 0.35, VD: 0.15, VDC: 0.00 };
+        else if (m <= 45) ratios = { NB: 0.40, TH: 0.35, VD: 0.20, VDC: 0.05 };
+        else if (m <= 60) ratios = { NB: 0.35, TH: 0.35, VD: 0.25, VDC: 0.05 };
+
+        const nbCount = Math.round(config.limit * ratios.NB);
+        const thCount = Math.round(config.limit * ratios.TH);
+        const vdCount = Math.round(config.limit * ratios.VD);
+        const vdcCount = config.limit - nbCount - thCount - vdCount;
 
         const nbQuestions = shuffleArray<Question>(appState.originalQuestions.filter(q => q.difficulty === 'NB')).slice(0, nbCount);
         const thQuestions = shuffleArray<Question>(appState.originalQuestions.filter(q => q.difficulty === 'TH')).slice(0, thCount);
-        const vdQuestions = shuffleArray<Question>(appState.originalQuestions.filter(q => ['VD', 'VDC'].includes(q.difficulty))).slice(0, vdCount);
+        const vdQuestions = shuffleArray<Question>(appState.originalQuestions.filter(q => q.difficulty === 'VD')).slice(0, vdCount);
+        const vdcQuestions = shuffleArray<Question>(appState.originalQuestions.filter(q => q.difficulty === 'VDC')).slice(0, vdcCount);
 
-        finalQuestions = [...nbQuestions, ...thQuestions, ...vdQuestions];
+        finalQuestions = [...nbQuestions, ...thQuestions, ...vdQuestions, ...vdcQuestions];
     } else {
         // CUSTOM MODE
         let filtered = appState.originalQuestions.filter(q => {

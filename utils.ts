@@ -16,15 +16,14 @@ export function formatTime(seconds: number): string {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-const DIFFICULTY_MAP: Record<string, Difficulty> = {
-  'Nhận biết': 'NB',
-  'Thông hiểu': 'TH',
-  'Vận dụng': 'VD',
-  'Vận dụng cao': 'VDC',
-  'NB': 'NB',
-  'TH': 'TH',
-  'VD': 'VD',
-  'VDC': 'VDC'
+const normalizeDifficulty = (val: any): Difficulty => {
+    if (!val) return 'NB';
+    const s = String(val).toUpperCase();
+    if (s === 'NB' || s.includes('NHẬN BIẾT')) return 'NB';
+    if (s === 'TH' || s.includes('THÔNG HIỂU')) return 'TH';
+    if (s === 'VDC' || s.includes('VẬN DỤNG CAO')) return 'VDC'; // Check VDC before VD
+    if (s === 'VD' || s.includes('VẬN DỤNG')) return 'VD';
+    return 'NB'; // Default
 };
 
 export function normalizeQuestions(input: any): Question[] {
@@ -38,41 +37,69 @@ export function normalizeQuestions(input: any): Question[] {
   }
 
   return data.map((q, index) => {
-    // Normalize Options
-    // Convert object-based options (id, content) to string format "ID. Content" to match UI components
+    // 1. Difficulty normalization
+    const difficulty = normalizeDifficulty(q.difficulty);
+
+    // 2. Options & Correct Answer normalization
     let options: string[] = [];
-    if (Array.isArray(q.options)) {
-      if (q.options.length > 0 && typeof q.options[0] === 'object') {
-         options = q.options.map((opt: any, optIdx: number) => {
-             const id = opt.id || String.fromCharCode(65 + optIdx);
-             return `${id}. ${opt.content}`;
-         });
-      } else {
-         options = q.options;
-      }
-    }
-
-    // Normalize Difficulty (Map Vietnamese text to Code)
-    const diffInput = q.difficulty || 'NB';
-    const difficulty: Difficulty = DIFFICULTY_MAP[diffInput] || 'NB';
-
-    // Normalize Correct Answer
-    // Logic: 
-    // 1. If correctOptionId is present and is a number, map it to A, B, C...
-    // 2. If correctOptionId is a string, use it.
-    // 3. Fallback to correctAnswer field.
     let correctAnswer = '';
-    
-    if (typeof q.correctOptionId === 'number') {
-        correctAnswer = String.fromCharCode(65 + q.correctOptionId);
-    } else if (q.correctOptionId !== undefined && q.correctOptionId !== null) {
-        correctAnswer = String(q.correctOptionId);
-    } else if (q.correctAnswer !== undefined && q.correctAnswer !== null) {
-        correctAnswer = String(q.correctAnswer);
+
+    if (Array.isArray(q.options) && q.options.length > 0) {
+        // Case A: Options are objects { id: string, content: string }
+        if (typeof q.options[0] === 'object' && q.options[0] !== null) {
+            const correctId = q.correctOptionId;
+            let foundIndex = -1;
+
+            options = q.options.map((opt: any, idx: number) => {
+                // Check if this option ID matches the correctOptionId
+                // Use loose comparison to match string "1" with number 1 if needed
+                if (correctId !== undefined && opt.id == correctId) {
+                    foundIndex = idx;
+                }
+                // Convert content to standardized "A. Content" format
+                const label = String.fromCharCode(65 + idx); // A, B, C...
+                // Handle cases where content might already start with "A." (though rare in object format)
+                return `${label}. ${opt.content}`;
+            });
+
+            // Set correct answer based on the index of the matching ID
+            if (foundIndex !== -1) {
+                correctAnswer = String.fromCharCode(65 + foundIndex);
+            } else {
+                // Fallback: Check if correctAnswer field exists directly
+                if (q.correctAnswer) correctAnswer = String(q.correctAnswer);
+                else if (q.correctOptionId) correctAnswer = String(q.correctOptionId);
+            }
+        } 
+        // Case B: Options are simple strings
+        else {
+            options = q.options.map((opt: string) => String(opt));
+            
+            // Determine Correct Answer for string arrays
+            if (typeof q.correctOptionId === 'number') {
+                // e.g. 0 -> A
+                correctAnswer = String.fromCharCode(65 + q.correctOptionId);
+            } else if (q.correctOptionId !== undefined && q.correctOptionId !== null) {
+                // e.g. "0" -> A, "A" -> A
+                const strId = String(q.correctOptionId);
+                const numId = parseInt(strId);
+                // If it looks like an index (0-9)
+                if (!isNaN(numId) && numId >= 0 && numId < 10 && strId.length === 1) {
+                     correctAnswer = String.fromCharCode(65 + numId);
+                } else {
+                     correctAnswer = strId;
+                }
+            } else if (q.correctAnswer) {
+                correctAnswer = String(q.correctAnswer);
+            }
+        }
     }
 
-    // Normalize Explanation: Check common field names
+    // 3. Explanation normalization
     const explanation = q.explanation || q.solution || q.loigiai || q.loi_giai || q.guide || q.huongdan || '';
+
+    // 4. Lesson/Chapter normalization
+    const lesson = q.lesson || q.chapter || q.bai || q.chuong || '';
 
     return {
       id: q.id ? String(q.id) : `q-${index}`,
@@ -81,7 +108,8 @@ export function normalizeQuestions(input: any): Question[] {
       difficulty: difficulty,
       options: options,
       correctAnswer: correctAnswer,
-      explanation: explanation
+      explanation: explanation,
+      lesson: lesson
     };
   });
 }
