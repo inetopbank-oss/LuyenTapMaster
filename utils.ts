@@ -1,4 +1,4 @@
-import { Question, Difficulty } from './types';
+import { Question, Difficulty, QuestionType } from './types';
 
 // Fisher-Yates shuffle
 export function shuffleArray<T>(array: T[]): T[] {
@@ -121,7 +121,7 @@ export function normalizeQuestions(input: any): Question[] {
     return {
       id: q.id ? String(q.id) : `q-${index}`,
       content: q.content || q.text || '',
-      type: q.type || 'MCQ',
+      type: (q.type as QuestionType) || 'MCQ',
       difficulty: difficulty,
       options: options,
       correctAnswer: correctAnswer,

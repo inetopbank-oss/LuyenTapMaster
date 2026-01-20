@@ -52,15 +52,16 @@ const App: React.FC = () => {
       setAppState(prev => ({
           ...prev,
           userInfo: { ...info, isAdmin },
-          status: 'UPLOAD'
+          // UPDATE: If admin, go straight to Dashboard, skip upload
+          status: isAdmin ? 'ADMIN_DASHBOARD' : 'UPLOAD',
+          originalQuestions: isAdmin ? [] : prev.originalQuestions
       }));
   };
 
   const handleDataLoaded = (questions: Question[]) => {
     setAppState(prev => ({
       ...prev,
-      // If admin, go to Admin Dashboard, else go to Student Config
-      status: prev.userInfo?.isAdmin ? 'ADMIN_DASHBOARD' : 'CONFIG',
+      status: 'CONFIG', // Student always goes to config after upload
       originalQuestions: questions,
       // Reset other states
       activeQuestions: [],
@@ -194,8 +195,9 @@ const App: React.FC = () => {
   const handleHome = () => {
       setAppState(prev => ({
           ...prev,
-          status: 'UPLOAD', // Go back to upload but keep user info
-          originalQuestions: [], 
+          // If admin, go back to Dashboard, else go to Upload
+          status: prev.userInfo?.isAdmin ? 'ADMIN_DASHBOARD' : 'UPLOAD',
+          originalQuestions: prev.userInfo?.isAdmin ? [] : [], 
           activeQuestions: [],
           userAnswers: {}
       }));
@@ -214,11 +216,15 @@ const App: React.FC = () => {
   };
 
   const handleBackFromGuide = () => {
-      // If user is logged in, go to UPLOAD, else go to LOGIN
-      setAppState(prev => ({
-          ...prev,
-          status: prev.userInfo ? 'UPLOAD' : 'LOGIN'
-      }));
+      // If user is logged in, go to appropriate screen, else go to LOGIN
+      if (appState.userInfo) {
+          setAppState(prev => ({
+            ...prev,
+            status: prev.userInfo?.isAdmin ? 'ADMIN_DASHBOARD' : 'UPLOAD'
+          }));
+      } else {
+           setAppState(prev => ({ ...prev, status: 'LOGIN' }));
+      }
   };
 
   // Determine time spent in seconds

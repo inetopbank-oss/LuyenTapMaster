@@ -9,7 +9,10 @@ export interface Question {
   options?: string[]; // Mostly for MCQ
   correctAnswer?: string;
   explanation?: string;
-  lesson?: string; // New field for Textbook Lesson
+  lesson?: string; // Textbook Lesson / Chapter
+  grade?: number; // 10, 11, 12
+  topic?: string; // Broad topic
+  mathType?: string; // Specific math problem type (Dạng toán)
 }
 
 export interface UserInfo {
