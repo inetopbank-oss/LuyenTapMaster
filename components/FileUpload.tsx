@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef } from 'react';
-import { Upload, FileJson, AlertCircle, Sparkles, BookOpen, Link as LinkIcon, Loader2, HelpCircle } from 'lucide-react';
-import { normalizeQuestions } from '../utils';
+import { Upload, FileJson, AlertCircle, Sparkles, BookOpen, Link as LinkIcon, Loader2, HelpCircle, FileText } from 'lucide-react';
+import { normalizeQuestions, parseMarkdownToQuestions, cleanJsonString } from '../utils';
 import { Question } from '../types';
 
 interface FileUploadProps {
@@ -15,42 +15,66 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onGuide }) => {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const processContent = (content: string) => {
+  const processContent = (rawContent: string, fileName?: string) => {
       try {
-        const json = JSON.parse(content);
-        const questions = normalizeQuestions(json);
-        
-        if (questions.length === 0) {
-            throw new Error('Không tìm thấy câu hỏi nào trong file (kiểm tra cấu trúc JSON).');
+        // Pre-clean the content
+        const content = cleanJsonString(rawContent);
+
+        // 1. Try JSON First
+        try {
+            const json = JSON.parse(content);
+            const questions = normalizeQuestions(json);
+            if (questions.length === 0) {
+                 // If valid JSON but logic found 0 questions, throw to fallback to MD
+                 throw new Error('Valid JSON but no questions found via normalize');
+            }
+            onDataLoaded(questions);
+            return; // Success with JSON
+        } catch (jsonErr) {
+            // Check if HTML (often happens with bad links)
+            if (content.trim().toLowerCase().startsWith('<!doctype html') || content.trim().toLowerCase().startsWith('<html')) {
+                 throw new Error('Link trả về trang HTML thay vì dữ liệu. Vui lòng kiểm tra quyền truy cập link.');
+            }
+            
+            // 2. Try Markdown/Text Parsing
+            // We proceed if the file extension suggests MD/TXT or if JSON parse failed
+            const questions = parseMarkdownToQuestions(content);
+            if (questions.length > 0) {
+                 onDataLoaded(questions);
+                 return; // Success with Markdown
+            } else {
+                 throw new Error('Không nhận diện được dữ liệu. Hãy đảm bảo file đúng định dạng JSON hoặc Markdown (Câu 1: ...).');
+            }
         }
-        onDataLoaded(questions);
       } catch (err: any) {
-        if (content.trim().toLowerCase().startsWith('<!doctype html') || content.trim().toLowerCase().startsWith('<html')) {
-             setError('Link trả về trang HTML thay vì JSON. Vui lòng đảm bảo Link Google Drive ở chế độ "Bất kỳ ai có đường liên kết" (Public).');
-        } else {
-             setError(`Lỗi đọc dữ liệu: ${err.message}`);
-        }
+         setError(`Lỗi đọc dữ liệu: ${err.message}`);
       }
   };
 
   const processFile = (file: File) => {
     setError(null);
-    const isValid = file.type === 'application/json' || 
+    
+    // Relaxed Validation: Allow more types, we will trust the content parsing more
+    const isLikelyValid = file.type === 'application/json' || 
                     file.type === 'text/plain' ||
-                    file.name.endsWith('.json') || 
-                    file.name.endsWith('.txt');
+                    file.type === 'text/markdown' ||
+                    file.name.match(/\.(json|txt|md|js|ts)$/i);
 
-    if (!isValid) {
-      setError('Vui lòng tải lên file định dạng .json hoặc .txt');
-      return;
+    // If strictly image or binary, reject
+    if (file.type.startsWith('image/') || file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+        setError('Không hỗ trợ file hình ảnh/âm thanh. Vui lòng tải file văn bản (JSON, MD, TXT).');
+        return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
-          processContent(e.target.result as string);
+          processContent(e.target.result as string, file.name);
       }
     };
+    reader.onerror = () => {
+        setError("Không thể đọc file.");
+    }
     reader.readAsText(file);
   };
 
@@ -166,7 +190,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onGuide }) => {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json,application/json,.txt,text/plain"
+            // Accept almost anything text-based to let the parser decide
+            accept=".json,application/json,.txt,text/plain,.md,text/markdown,.js,.ts"
             onChange={handleInputChange}
             className="hidden"
           />
@@ -181,10 +206,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onGuide }) => {
 
             <div className="space-y-2">
                 <h3 className="text-2xl md:text-3xl font-bold text-slate-800">
-                    Chọn file đề thi (.json)
+                    Chọn file đề thi
                 </h3>
                 <p className="text-lg text-slate-400 font-medium">
-                    Kéo thả hoặc chạm để tải lên
+                    Hỗ trợ JSON, Markdown hoặc Text (Copy từ ChatGPT)
                 </p>
             </div>
             
@@ -240,14 +265,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onGuide }) => {
         <div className="pt-8 flex flex-col items-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
             <div className="flex justify-center gap-6">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
-                    <FileJson size={18} /> Định dạng JSON
+                    <FileJson size={18} /> JSON
+                </div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+                    <FileText size={18} /> Markdown / TXT
                 </div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
                     <BookOpen size={18} /> Ma trận chuẩn
                 </div>
             </div>
             <div className="text-xs font-bold text-slate-400 tracking-widest uppercase">
-                Phiên bản v1.3.0
+                Phiên bản v1.3.1
             </div>
         </div>
       </div>

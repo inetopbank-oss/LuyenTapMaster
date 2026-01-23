@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Database, FileDown, LogOut, Layers, Settings, Trash2, BookOpen, Save, Bot, Sparkles, BrainCircuit, ArrowRight, Loader2, Filter, CheckCircle, Check, AlertTriangle, Plus, Square, CopyMinus, X, RefreshCcw } from 'lucide-react';
+import { Database, FileDown, LogOut, Layers, Settings, Trash2, BookOpen, Save, Bot, Sparkles, BrainCircuit, ArrowRight, Loader2, Filter, CheckCircle, Check, AlertTriangle, Square, CopyMinus, Wrench, Eye } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { Question, Difficulty, QuestionType } from '../types';
 import { shuffleArray, normalizeQuestions } from '../utils';
@@ -27,6 +27,12 @@ interface AIConfig {
     count: number;
 }
 
+// Latex Error Interface
+interface LatexErrorItem {
+    question: Question;
+    errors: string[]; // List of specific errors found
+}
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'GENERATE' | 'MANAGE' | 'AI_CREATOR'>('AI_CREATOR');
   
@@ -40,7 +46,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
   // --- NEW: DUPLICATE MANAGEMENT STATE ---
   const [duplicateMode, setDuplicateMode] = useState(false);
   const [duplicatesFound, setDuplicatesFound] = useState<Question[]>([]);
-  const [scanMessage, setScanMessage] = useState<{type: 'success' | 'info', text: string} | null>(null);
+  
+  // --- NEW: LATEX ERROR MANAGEMENT STATE ---
+  const [fixLatexMode, setFixLatexMode] = useState(false);
+  const [latexErrorItems, setLatexErrorItems] = useState<LatexErrorItem[]>([]);
+  const [currentFixIndex, setCurrentFixIndex] = useState(0);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+
+  const [scanMessage, setScanMessage] = useState<{type: 'success' | 'info' | 'error', text: string} | null>(null);
   
   // --- STATE FOR EXAM GENERATOR ---
   const [examTitle, setExamTitle] = useState('Đề kiểm tra Toán');
@@ -75,6 +88,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
       }
   }, [scanMessage]);
 
+  // Sync editingQuestion when index changes or list changes
+  useEffect(() => {
+      if (fixLatexMode && latexErrorItems.length > 0) {
+          // Deep copy to allow editing without mutating state immediately
+          setEditingQuestion(JSON.parse(JSON.stringify(latexErrorItems[currentFixIndex].question)));
+      } else {
+          setEditingQuestion(null);
+      }
+  }, [currentFixIndex, fixLatexMode, latexErrorItems]);
+
   // Analyze Managed Bank (Dynamic)
   const stats = useMemo(() => {
     return {
@@ -102,6 +125,102 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
       if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
       return cleaned.trim();
   };
+
+  // --- LATEX VALIDATION LOGIC ---
+  const checkLatexString = (str: string, label: string): string[] => {
+      if (!str) return [];
+      const errors: string[] = [];
+
+      // 1. Check balanced dollar signs $
+      const dollarCount = (str.match(/\$/g) || []).length;
+      if (dollarCount % 2 !== 0) {
+          errors.push(`${label}: Số lượng dấu $ lẻ (có thể chưa đóng Math Mode).`);
+      }
+
+      // 2. Check balanced curly braces {}
+      let braceBalance = 0;
+      for (let i = 0; i < str.length; i++) {
+          if (str[i] === '{' && str[i-1] !== '\\') braceBalance++; 
+          if (str[i] === '}' && str[i-1] !== '\\') braceBalance--;
+          if (braceBalance < 0) {
+              errors.push(`${label}: Dư dấu đóng ngoặc } ở vị trí ${i}.`);
+              break; 
+          }
+      }
+      if (braceBalance > 0) {
+          errors.push(`${label}: Thiếu ${braceBalance} dấu đóng ngoặc }.`);
+      }
+      
+      return errors;
+  };
+
+  const handleScanLatex = () => {
+      const errorItems: LatexErrorItem[] = [];
+
+      managedBank.forEach(q => {
+          let qErrors: string[] = [];
+          
+          qErrors = [...qErrors, ...checkLatexString(q.content, 'Nội dung')];
+          
+          q.options?.forEach((opt, idx) => {
+              qErrors = [...qErrors, ...checkLatexString(opt, `Đáp án ${idx + 1}`)];
+          });
+
+          if (q.explanation) {
+              qErrors = [...qErrors, ...checkLatexString(q.explanation, 'Lời giải')];
+          }
+
+          if (qErrors.length > 0) {
+              errorItems.push({ question: q, errors: qErrors });
+          }
+      });
+
+      if (errorItems.length > 0) {
+          setLatexErrorItems(errorItems);
+          setFixLatexMode(true);
+          setCurrentFixIndex(0);
+          setScanMessage({ type: 'info', text: `Tìm thấy ${errorItems.length} câu hỏi có lỗi cú pháp LaTeX.` });
+      } else {
+          setScanMessage({ type: 'success', text: 'Tuyệt vời! Không tìm thấy lỗi cú pháp LaTeX nào.' });
+      }
+  };
+
+  const handleSaveFixedQuestion = () => {
+      if (!editingQuestion) return;
+
+      setManagedBank(prev => prev.map(q => q.id === editingQuestion.id ? editingQuestion : q));
+      
+      const newErrors = [...latexErrorItems];
+      newErrors.splice(currentFixIndex, 1);
+      
+      setLatexErrorItems(newErrors);
+      
+      if (currentFixIndex >= newErrors.length) {
+          setCurrentFixIndex(Math.max(0, newErrors.length - 1));
+      }
+
+      if (newErrors.length === 0) {
+          setFixLatexMode(false);
+          setScanMessage({ type: 'success', text: "Đã sửa hết các lỗi LaTeX!" });
+      } else {
+          setScanMessage({ type: 'success', text: "Đã lưu sửa đổi." });
+      }
+  };
+
+  const handleIgnoreError = () => {
+       const newErrors = [...latexErrorItems];
+       newErrors.splice(currentFixIndex, 1);
+       setLatexErrorItems(newErrors);
+       
+       if (currentFixIndex >= newErrors.length) {
+           setCurrentFixIndex(Math.max(0, newErrors.length - 1));
+       }
+
+       if (newErrors.length === 0) {
+           setFixLatexMode(false);
+       }
+  };
+
 
   // --- AI LOGIC (Unchanged) ---
   const handleAnalyzeTopic = async () => {
@@ -286,7 +405,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
     const duplicates: Question[] = [];
 
     managedBank.forEach((q) => {
-        // Create a signature: Clean Content + Clean Sorted Options
         const cleanContent = q.content.replace(/\s+/g, '').toLowerCase();
         let optionSig = '';
         if (q.options && q.options.length > 0) {
@@ -296,7 +414,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
         const signature = `${cleanContent}::${optionSig}`;
 
         if (uniqueMap.has(signature)) {
-            duplicates.push(q); // This is a duplicate that can be removed
+            duplicates.push(q); 
         } else {
             uniqueMap.set(signature, q);
         }
@@ -311,7 +429,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
   };
 
   const handleConfirmDeduplicate = () => {
-      // Logic: Filter out questions that are in the duplicatesFound list
       const idsToRemove = new Set(duplicatesFound.map(d => d.id));
       setManagedBank(prev => prev.filter(q => !idsToRemove.has(q.id)));
       
@@ -725,10 +842,147 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
       </div>
   );
 
+  const renderLatexFixer = () => {
+      const errorItem = latexErrorItems[currentFixIndex];
+      const question = editingQuestion || errorItem.question;
+
+      return (
+          <div className="space-y-6 animate-fade-in">
+              {/* Header Fixer */}
+              <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200 shadow-sm">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                      <div className="flex items-start gap-4">
+                          <div className="p-3 bg-amber-100 text-amber-700 rounded-xl">
+                              <Wrench size={24} />
+                          </div>
+                          <div>
+                              <h3 className="font-bold text-amber-900 text-lg">Sửa lỗi LaTeX ({currentFixIndex + 1}/{latexErrorItems.length})</h3>
+                              <p className="text-amber-800/80 text-sm mt-1">
+                                  Phát hiện lỗi cú pháp. Vui lòng sửa trực tiếp bên dưới và xem trước kết quả.
+                              </p>
+                              {errorItem.errors.length > 0 && (
+                                  <div className="mt-2 text-xs font-mono bg-white/50 text-rose-600 p-2 rounded border border-rose-100">
+                                      {errorItem.errors.map((e, i) => <div key={i}>• {e}</div>)}
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                          <button 
+                              onClick={handleIgnoreError}
+                              className="px-4 py-2 bg-white text-slate-500 hover:text-slate-700 font-bold rounded-lg border border-slate-200 text-sm"
+                          >
+                              Bỏ qua
+                          </button>
+                          <button 
+                              onClick={handleSaveFixedQuestion}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-md text-sm flex items-center gap-2"
+                          >
+                              <Save size={16} /> Lưu sửa đổi
+                          </button>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Editor Split View */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left: Editor */}
+                  <div className="space-y-4">
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                          <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Nội dung câu hỏi (LaTeX)</label>
+                          <textarea 
+                              className="w-full h-40 p-3 font-mono text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 bg-slate-50"
+                              value={question.content}
+                              onChange={(e) => setEditingQuestion({...question, content: e.target.value})}
+                          ></textarea>
+                      </div>
+                      
+                      {question.options && (
+                          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                              <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Đáp án (LaTeX)</label>
+                              {question.options.map((opt, idx) => (
+                                  <div key={idx} className="flex gap-2">
+                                      <span className="shrink-0 w-8 h-10 flex items-center justify-center bg-slate-100 text-slate-500 font-bold text-xs rounded border border-slate-200">
+                                          {String.fromCharCode(65 + idx)}
+                                      </span>
+                                      <input 
+                                          className="flex-1 px-3 font-mono text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 bg-slate-50"
+                                          value={opt}
+                                          onChange={(e) => {
+                                              const newOpts = [...(question.options || [])];
+                                              newOpts[idx] = e.target.value;
+                                              setEditingQuestion({...question, options: newOpts});
+                                          }}
+                                      />
+                                  </div>
+                              ))}
+                          </div>
+                      )}
+
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                          <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Lời giải chi tiết (LaTeX)</label>
+                          <textarea 
+                              className="w-full h-32 p-3 font-mono text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 bg-slate-50"
+                              value={question.explanation || ''}
+                              onChange={(e) => setEditingQuestion({...question, explanation: e.target.value})}
+                          ></textarea>
+                      </div>
+                  </div>
+
+                  {/* Right: Preview */}
+                  <div className="space-y-4">
+                      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm min-h-[500px] flex flex-col">
+                           <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+                               <Eye size={20} className="text-indigo-600" />
+                               <h4 className="font-bold text-slate-800">Xem trước hiển thị</h4>
+                           </div>
+                           
+                           <div className="space-y-6">
+                               <div>
+                                   <div className="text-slate-400 text-xs font-bold uppercase mb-2">Câu hỏi</div>
+                                   <div className="text-slate-800 font-medium text-lg leading-relaxed">
+                                       <MathText content={question.content} block />
+                                   </div>
+                               </div>
+
+                               {question.options && (
+                                   <div className="grid grid-cols-1 gap-3">
+                                       {question.options.map((opt, idx) => (
+                                           <div key={idx} className="p-3 rounded-lg border border-slate-200 bg-slate-50 flex items-start gap-3">
+                                               <span className="font-bold text-slate-500 text-sm mt-0.5">{String.fromCharCode(65 + idx)}.</span>
+                                               <div className="text-sm font-medium text-slate-700">
+                                                   <MathText content={opt.replace(/^[A-D]\.\s*/, '')} />
+                                               </div>
+                                           </div>
+                                       ))}
+                                   </div>
+                               )}
+
+                               {question.explanation && (
+                                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                       <div className="text-slate-400 text-xs font-bold uppercase mb-2">Lời giải</div>
+                                       <div className="text-slate-600 text-sm">
+                                           <MathText content={question.explanation} block />
+                                       </div>
+                                   </div>
+                               )}
+                           </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      );
+  }
+
   const renderManager = () => {
       // Return Duplicate Review UI if active
       if (duplicateMode) {
           return renderDuplicateReview();
+      }
+
+      // Return Latex Fixer UI if active
+      if (fixLatexMode) {
+          return renderLatexFixer();
       }
 
       // Filter Logic
@@ -745,8 +999,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
                   
                   {/* Inline Scan Message (Instead of Alert) */}
                   {scanMessage && (
-                      <div className={`absolute top-0 left-0 right-0 -mt-12 mx-auto w-fit px-6 py-2 rounded-full shadow-lg font-bold text-sm flex items-center gap-2 animate-slide-up ${scanMessage.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'}`}>
-                          <CheckCircle size={16} /> {scanMessage.text}
+                      <div className={`absolute top-0 left-0 right-0 -mt-12 mx-auto w-fit px-6 py-2 rounded-full shadow-lg font-bold text-sm flex items-center gap-2 animate-slide-up 
+                        ${scanMessage.type === 'success' ? 'bg-emerald-600 text-white' : scanMessage.type === 'error' ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}>
+                          {scanMessage.type === 'success' && <CheckCircle size={16} />}
+                          {scanMessage.type === 'error' && <AlertTriangle size={16} />}
+                          {scanMessage.type === 'info' && <Bot size={16} />}
+                          {scanMessage.text}
                       </div>
                   )}
 
@@ -758,201 +1016,235 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ questionBank, onLogout 
                             onChange={(e) => setFilterGrade(e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value))}
                             className="bg-slate-50 border border-slate-200 text-sm font-bold text-slate-700 rounded-lg p-2 focus:outline-none"
                           >
-                              <option value="ALL">Tất cả Khối</option>
+                              <option value="ALL">Tất cả</option>
                               <option value="10">Lớp 10</option>
                               <option value="11">Lớp 11</option>
                               <option value="12">Lớp 12</option>
                           </select>
                       </div>
-                      <input 
-                        type="text" 
-                        placeholder="Tìm theo chủ đề..." 
-                        value={filterTopic}
-                        onChange={(e) => setFilterTopic(e.target.value)}
-                        className="bg-slate-50 border border-slate-200 text-sm font-medium rounded-lg p-2 w-full md:w-64 focus:outline-none focus:border-indigo-500"
-                      />
+                      <div className="flex items-center gap-2 flex-1 w-full">
+                          <div className="relative flex-1 group">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                  <Filter size={18} />
+                              </div>
+                              <input 
+                                  type="text" 
+                                  value={filterTopic}
+                                  onChange={(e) => setFilterTopic(e.target.value)}
+                                  placeholder="Tìm theo chủ đề, nội dung..."
+                                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                              />
+                          </div>
+                      </div>
+                      
+                      <div className="flex gap-2 w-full md:w-auto">
+                          <button 
+                              onClick={handleScanLatex}
+                              className="px-4 py-2 bg-white text-slate-600 hover:text-amber-600 border border-slate-200 hover:border-amber-300 font-bold rounded-lg text-sm transition-colors flex items-center gap-2"
+                              title="Kiểm tra lỗi cú pháp LaTeX"
+                          >
+                              <Wrench size={16} /> <span className="hidden md:inline">Check LaTeX</span>
+                          </button>
+                           <button 
+                              onClick={handleScanDuplicates}
+                              className="px-4 py-2 bg-white text-slate-600 hover:text-orange-600 border border-slate-200 hover:border-orange-300 font-bold rounded-lg text-sm transition-colors flex items-center gap-2"
+                              title="Quét câu hỏi trùng lặp"
+                          >
+                              <CopyMinus size={16} /> <span className="hidden md:inline">Check Trùng</span>
+                          </button>
+                      </div>
                   </div>
-                  <div className="flex gap-2">
-                       <span className="text-sm font-bold text-slate-500 bg-slate-100 px-3 py-2 rounded-lg">
-                           Hiển thị: {filteredQuestions.length} / {managedBank.length}
-                       </span>
-                       <button 
-                        onClick={handleScanDuplicates}
-                        className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-bold transition-colors"
-                        title="Quét và xóa câu hỏi trùng lặp"
-                       >
-                           <CopyMinus size={18} /> Lọc trùng
-                       </button>
-                       <button 
-                        onClick={() => downloadJSON({ title: "Ngân hàng lọc", questions: filteredQuestions }, `Bank_Filter_${Date.now()}.json`)}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors"
-                       >
-                           <FileDown size={18} /> Xuất file đã lọc
-                       </button>
-                       <label className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-colors cursor-pointer">
-                            <Plus size={18} /> Nhập thêm
-                            <input 
-                                type="file" 
-                                accept=".json"
-                                onChange={(e) => {
-                                    if(e.target.files?.[0]) {
-                                        const reader = new FileReader();
-                                        reader.onload = (ev) => {
-                                            try {
-                                                const json = JSON.parse(ev.target?.result as string);
-                                                let newQs: Question[] = [];
-                                                if(Array.isArray(json)) newQs = json;
-                                                else if(json.questions) newQs = json.questions;
-                                                
-                                                if(newQs.length > 0) {
-                                                    setManagedBank(prev => [...prev, ...newQs]);
-                                                    alert(`Đã nhập thêm ${newQs.length} câu hỏi.`);
-                                                }
-                                            } catch(err) {
-                                                alert("Lỗi đọc file JSON");
-                                            }
-                                        };
-                                        reader.readAsText(e.target.files[0]);
-                                    }
-                                    e.target.value = '';
-                                }}
-                                className="hidden"
-                            />
-                       </label>
-                  </div>
-              </div>
 
-              {/* List */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
-                  <div className="divide-y divide-slate-100 max-h-[800px] overflow-y-auto">
-                        {filteredQuestions.length === 0 ? (
-                            <div className="p-12 text-center text-slate-400">
-                                <Database size={48} className="mx-auto mb-4 opacity-20" />
-                                <p>Không tìm thấy câu hỏi nào.</p>
-                            </div>
-                        ) : (
-                            filteredQuestions.map((q, idx) => (
-                                <div key={q.id} className="p-4 hover:bg-slate-50 transition-colors group">
-                                    <div className="flex justify-between items-start gap-4 mb-2">
-                                        <div className="flex gap-2 flex-wrap">
-                                            <span className="bg-slate-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">{idx + 1}</span>
-                                            {q.grade && <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded">Lớp {q.grade}</span>}
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${q.difficulty === 'NB' ? 'bg-green-50 text-green-700 border-green-200' : q.difficulty === 'TH' ? 'bg-blue-50 text-blue-700 border-blue-200' : q.difficulty === 'VD' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{q.difficulty}</span>
-                                            {(q.topic || q.lesson) && (
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-100 flex items-center gap-1">
-                                                    <BookOpen size={10} /> {q.topic || q.lesson}
-                                                </span>
-                                            )}
-                                            {q.mathType && (
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-purple-50 text-purple-700 border-purple-100">
-                                                    {q.mathType}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <button 
-                                        onClick={() => {
-                                            if(confirm("Xóa câu hỏi này?")) {
-                                                setManagedBank(prev => prev.filter(x => x.id !== q.id));
-                                            }
-                                        }}
-                                        className="text-slate-300 hover:text-red-500 transition-colors p-1"
-                                        title="Xóa câu hỏi"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                    <div className="text-sm text-slate-800 font-medium mb-2 pl-2 border-l-2 border-slate-200 group-hover:border-indigo-400 transition-colors">
-                                        <MathText content={q.content} />
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                  </div>
+                  {/* Question List */}
               </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[600px]">
+                      <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                          <div className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                              <Database size={14} /> Ngân hàng câu hỏi ({filteredQuestions.length})
+                          </div>
+                          <div className="flex gap-1">
+                               {/* Difficulty Badges Summary */}
+                               {['NB', 'TH', 'VD', 'VDC'].map(d => {
+                                   const count = filteredQuestions.filter(q => q.difficulty === d).length;
+                                   return count > 0 && (
+                                       <span key={d} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">
+                                           {d}: {count}
+                                       </span>
+                                   );
+                               })}
+                          </div>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                          {filteredQuestions.length === 0 ? (
+                              <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                  <Filter size={48} className="mb-4 opacity-20" />
+                                  <p>Không tìm thấy câu hỏi phù hợp bộ lọc.</p>
+                              </div>
+                          ) : (
+                              filteredQuestions.slice(0, 50).map((q, idx) => ( // Pagination limit for performance
+                                  <div key={q.id} className="p-4 rounded-xl border border-slate-100 hover:border-indigo-300 hover:shadow-md transition-all bg-white group">
+                                      <div className="flex justify-between items-start mb-2">
+                                           <div className="flex gap-2 items-center flex-wrap">
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${q.difficulty === 'NB' ? 'bg-green-50 text-green-700 border-green-200' : q.difficulty === 'TH' ? 'bg-blue-50 text-blue-700 border-blue-200' : q.difficulty === 'VD' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{q.difficulty}</span>
+                                                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold border border-slate-200">Lớp {q.grade}</span>
+                                                {q.mathType && <span className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-bold border border-indigo-100">{q.mathType}</span>}
+                                                <span className="text-[10px] text-slate-400 font-mono ml-2">ID: {q.id}</span>
+                                           </div>
+                                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                               {/* Ideally Edit Logic Here - For now just Delete */}
+                                                <button 
+                                                    onClick={() => {
+                                                        if(confirm('Bạn có chắc muốn xóa câu hỏi này?')) {
+                                                            setManagedBank(prev => prev.filter(item => item.id !== q.id));
+                                                        }
+                                                    }}
+                                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                           </div>
+                                      </div>
+                                      <div className="text-sm font-medium text-slate-800 line-clamp-3 mb-2">
+                                           <MathText content={q.content} />
+                                      </div>
+                                      <div className="text-xs text-slate-500 italic">
+                                          {q.topic || 'Chưa có chủ đề'}
+                                      </div>
+                                  </div>
+                              ))
+                          )}
+                          {filteredQuestions.length > 50 && (
+                              <div className="text-center text-xs text-slate-400 py-4">
+                                  Đang hiển thị 50 / {filteredQuestions.length} câu hỏi. Hãy dùng bộ lọc để tìm kiếm chi tiết.
+                              </div>
+                          )}
+                      </div>
+                  </div>
           </div>
-      )
+      );
   };
 
-  const renderExamGenerator = () => (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Stats */}
-          <div className="lg:col-span-1 space-y-6">
-               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 className="font-bold text-slate-800 mb-4">Kho hiện tại</h3>
-                    <div className="space-y-2">
-                        <div className="flex justify-between p-2 bg-slate-50 rounded"><span>Tổng</span><span className="font-bold">{stats.Total}</span></div>
-                        <div className="flex justify-between p-2 text-green-700 bg-green-50 rounded"><span>Nhận biết</span><span className="font-bold">{stats.NB}</span></div>
-                        <div className="flex justify-between p-2 text-blue-700 bg-blue-50 rounded"><span>Thông hiểu</span><span className="font-bold">{stats.TH}</span></div>
-                        <div className="flex justify-between p-2 text-orange-700 bg-orange-50 rounded"><span>Vận dụng</span><span className="font-bold">{stats.VD}</span></div>
-                        <div className="flex justify-between p-2 text-red-700 bg-red-50 rounded"><span>VD Cao</span><span className="font-bold">{stats.VDC}</span></div>
-                    </div>
-               </div>
-          </div>
-          {/* Config */}
-          <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Layers className="text-indigo-600"/> Cấu trúc đề</h3>
-                  <div className="space-y-4">
-                      <div>
-                          <label className="text-xs font-bold text-slate-500 uppercase">Tên đề</label>
-                          <input type="text" value={examTitle} onChange={e => setExamTitle(e.target.value)} className="w-full border rounded p-2 mt-1" />
-                      </div>
-                      <div>
-                          <label className="text-xs font-bold text-slate-500 uppercase">Thời gian (phút)</label>
-                          <input type="number" value={duration} onChange={e => setDuration(parseInt(e.target.value))} className="w-full border rounded p-2 mt-1" />
-                      </div>
-                      <div className="grid grid-cols-4 gap-4">
-                           <div><label className="text-xs font-bold">NB</label><input type="number" value={matrix.NB} onChange={e => setMatrix({...matrix, NB: +e.target.value})} className="w-full border rounded p-2"/></div>
-                           <div><label className="text-xs font-bold">TH</label><input type="number" value={matrix.TH} onChange={e => setMatrix({...matrix, TH: +e.target.value})} className="w-full border rounded p-2"/></div>
-                           <div><label className="text-xs font-bold">VD</label><input type="number" value={matrix.VD} onChange={e => setMatrix({...matrix, VD: +e.target.value})} className="w-full border rounded p-2"/></div>
-                           <div><label className="text-xs font-bold">VDC</label><input type="number" value={matrix.VDC} onChange={e => setMatrix({...matrix, VDC: +e.target.value})} className="w-full border rounded p-2"/></div>
-                      </div>
-                      {genError && <div className="text-red-500 text-sm font-bold">{genError}</div>}
-                      <button onClick={handleExportExam} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700">Xuất đề thi (JSON)</button>
-                  </div>
-              </div>
-          </div>
-      </div>
-  );
-
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-20">
-      {/* Header */}
-      <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-             <div className="bg-indigo-500 p-2 rounded-lg shrink-0">
-                <Settings size={20} className="text-white" />
-             </div>
-             <div>
-                <h1 className="font-bold text-lg leading-tight">Khu vực Giáo viên</h1>
-                <p className="text-slate-400 text-xs">Quản lý & Thiết lập đề kiểm tra</p>
-             </div>
-          </div>
-          
-          <div className="flex items-center gap-2 bg-slate-800 p-1 rounded-xl overflow-x-auto">
-              <button onClick={() => setActiveTab('AI_CREATOR')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'AI_CREATOR' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
-                  <Sparkles size={16} /> Tạo bằng AI
-              </button>
-              <button onClick={() => setActiveTab('MANAGE')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'MANAGE' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
-                  <Database size={16} /> Quản lý Kho
-              </button>
-              <button onClick={() => setActiveTab('GENERATE')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'GENERATE' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
-                  <FileDown size={16} /> Xuất đề thi
-              </button>
-          </div>
+    <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
+       {/* Top Bar */}
+       <header className="bg-white border-b border-slate-200 sticky top-0 z-40 h-16 flex items-center px-6 justify-between shadow-sm">
+           <div className="flex items-center gap-2">
+               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                   <Settings size={20} />
+               </div>
+               <span className="font-black text-slate-800 text-lg tracking-tight">Admin Dashboard</span>
+               <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-bold rounded ml-2">v1.3.1</span>
+           </div>
 
-          <button onClick={onLogout} className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-bold transition-colors border border-slate-700 whitespace-nowrap">
-            <LogOut size={16} /> Thoát
-          </button>
-        </div>
-      </header>
+           <div className="flex items-center gap-4">
+               <div className="hidden md:flex items-center gap-4 text-sm font-bold text-slate-500 mr-4">
+                   <div className="flex items-center gap-1.5">
+                       <Database size={16} />
+                       <span>{stats.Total} câu</span>
+                   </div>
+               </div>
+               <button 
+                   onClick={onLogout}
+                   className="flex items-center gap-2 text-slate-500 hover:text-rose-600 text-sm font-bold transition-colors"
+               >
+                   <LogOut size={18} /> <span className="hidden md:inline">Đăng xuất</span>
+               </button>
+           </div>
+       </header>
 
-      <main className="max-w-7xl mx-auto px-4 md:px-6 py-8 animate-fade-in">
-        {activeTab === 'AI_CREATOR' && renderAICreator()}
-        {activeTab === 'MANAGE' && renderManager()}
-        {activeTab === 'GENERATE' && renderExamGenerator()}
-      </main>
+       <div className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+           {/* Sidebar Navigation */}
+           <div className="lg:col-span-2 flex flex-col gap-2">
+               <button 
+                   onClick={() => setActiveTab('AI_CREATOR')}
+                   className={`p-3 rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-all ${activeTab === 'AI_CREATOR' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+               >
+                   <Bot size={18} /> Soạn đề AI
+               </button>
+               <button 
+                   onClick={() => setActiveTab('MANAGE')}
+                   className={`p-3 rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-all ${activeTab === 'MANAGE' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+               >
+                   <Layers size={18} /> Quản lý kho
+               </button>
+               <button 
+                   onClick={() => setActiveTab('GENERATE')}
+                   className={`p-3 rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-all ${activeTab === 'GENERATE' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+               >
+                   <FileDown size={18} /> Xuất đề thi
+               </button>
+           </div>
+
+           {/* Main Content Area */}
+           <div className="lg:col-span-10">
+               {activeTab === 'AI_CREATOR' && renderAICreator()}
+               {activeTab === 'MANAGE' && renderManager()}
+               {activeTab === 'GENERATE' && (
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm animate-fade-in">
+                       <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2">
+                           <FileDown className="text-indigo-600" /> Xuất đề thi (Ma trận)
+                       </h2>
+                       
+                       <div className="max-w-2xl space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tên đề thi</label>
+                                    <input 
+                                        type="text" 
+                                        value={examTitle}
+                                        onChange={(e) => setExamTitle(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Thời gian (phút)</label>
+                                    <input 
+                                        type="number" 
+                                        value={duration}
+                                        onChange={(e) => setDuration(parseInt(e.target.value))}
+                                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-4">Cấu trúc ma trận (Số câu)</label>
+                                <div className="grid grid-cols-4 gap-4">
+                                    {(['NB', 'TH', 'VD', 'VDC'] as (keyof MatrixConfig)[]).map(key => (
+                                        <div key={key}>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">{key}</label>
+                                            <input 
+                                                type="number"
+                                                value={matrix[key]}
+                                                onChange={(e) => setMatrix({...matrix, [key]: parseInt(e.target.value) || 0})}
+                                                className="w-full px-3 py-2 rounded border border-slate-200 focus:border-indigo-500 text-center font-bold text-slate-700"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-4 text-right text-sm font-bold text-indigo-600">
+                                    Tổng: {matrix.NB + matrix.TH + matrix.VD + matrix.VDC} câu
+                                </div>
+                            </div>
+
+                            {genError && (
+                                <div className="p-4 bg-red-50 text-red-600 rounded-lg text-sm font-bold flex items-center gap-2">
+                                    <AlertTriangle size={16} /> {genError}
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={handleExportExam}
+                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+                            >
+                                <FileDown /> Xuất file JSON
+                            </button>
+                       </div>
+                   </div>
+               )}
+           </div>
+       </div>
     </div>
   );
 };
